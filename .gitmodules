@@ -1,0 +1,3 @@
+[submodule "flow_matching"]
+	path = flow_matching
+	url = https://github.com/uulm-mrm/Flow-Matching.git
