@@ -13,8 +13,9 @@ from flow_matching.flow_matching import (
     NaiveMidpoints,
 )
 from flow_matching.flow_matching.scheduler import CosineMultiScheduler
+from flow_matching.modules.utils import EMA
 
-from models.unet import TimeCondUnet
+from models.unet import UNet
 from utils import closest_anchor, anchors_to_class
 
 from data.mnist import get_mnist, MNISTSampler
@@ -25,6 +26,7 @@ def main():
 
     # consts
     device = "cuda:0"
+    mnist_shape = (1, 32, 32)
 
     classes = (0,)
     anchor_times = torch.tensor([0.0, 1.0], dtype=torch.float32, device=device)
@@ -33,22 +35,23 @@ def main():
     # might mess up classification
     time_class_map = dict(zip(anchor_times.cpu().numpy(), (-1, *classes)))
 
-    batch_size = 512
+    batch_size = 1024
 
-    t_dims = 64
+    t_dims = 256
     lr = 1e-3
-    epochs = 200
+    epochs = 1000
 
     mnist = get_mnist("train")
     x_sampler = MNISTSampler(
-        mnist, classes=classes, batch_size=batch_size, device=device
+        mnist, classes=classes, batch_size=batch_size, device=device, skip_last=True
     )
 
     # model stuff
-    unet = TimeCondUnet(in_c=1, filters=32, heads=4, t_dims=t_dims).to(device)
+    net = UNet(in_c=1, out_c=1, features=[32, 64, 128], t_dims=t_dims).to(device)
+    ema = EMA(net, rate=0.999)
     path = MultiPath(CosineMultiScheduler(k=path_width))
 
-    optim = torch.optim.AdamW(unet.parameters(), lr=lr)
+    optim = torch.optim.AdamW(net.parameters(), lr=lr)
 
     # training
     for _ in (pbar := tqdm(range(epochs))):
@@ -58,38 +61,41 @@ def main():
             optim.zero_grad()
 
             x0 = torch.randn_like(x[0])
-            t = torch.rand((x0.shape[0]), dtype=torch.float32, device=device)
+            t = torch.rand((x0.shape[0],), dtype=torch.float32, device=device)
 
             path_sample = path.sample(torch.stack([x0, *x], dim=0), anchor_times, t)
 
-            dxt_hat = unet.forward(path_sample.xt, path_sample.t)
+            dxt_hat = net.forward(path_sample.xt, t)
 
             loss = (dxt_hat - path_sample.dxt).square().mean()
 
             loss.backward()
             optim.step()
 
+            ema.update_ema_t()
+
             epoch_loss = epoch_loss + loss
 
         pbar.set_description(f"Loss: {(epoch_loss / x_sampler.batches):.3f}")
 
-    unet = unet.eval()
+    ema.to_model()
+    net = net.eval()
 
     # probability stuff
-    integrator = ODEProcess(unet, MidpointIntegrator())
+    integrator = ODEProcess(net, MidpointIntegrator())
     seeker = NaiveMidpoints(max_evals=30, iters=3)
     ode_steps = 20
     log_p0 = log_p0 = Independent(
         Normal(
-            torch.zeros((1, 28, 28), device=device),
-            torch.ones((1, 28, 28), device=device),
+            torch.zeros(mnist_shape, device=device),
+            torch.ones(mnist_shape, device=device),
         ),
         reinterpreted_batch_ndims=3,
     ).log_prob
 
     # plot path
     t_traj, x_traj = integrator.sample(
-        x_init=torch.randn((1, 1, 28, 28), dtype=torch.float32, device=device),
+        x_init=torch.randn((1, *mnist_shape), dtype=torch.float32, device=device),
         ints=torch.tensor(
             [[anchor_times[0].item(), anchor_times[-1].item()]],
             dtype=torch.float32,
@@ -108,7 +114,7 @@ def main():
     # yes you can flatten axes they are a np.array
     axs = axs.flatten()  # type: ignore
     for i, (time, sol) in enumerate(zip(t_traj, sols)):
-        sol = sol.reshape(28, 28)
+        sol = sol.reshape(*mnist_shape[1:])
         time = time.reshape(1).item()
 
         axs[i].imshow(sol, cmap="gray")
@@ -144,6 +150,8 @@ def main():
         for prob, interval in zip(probs.chunk(batch), intervals.chunk(batch)):
             plt.plot(interval[:, 0].cpu().numpy(), prob.cpu().numpy())
         plt.show()
+
+    return
 
     # classify digits
     indices = torch.cat([x_sampler.indices[c][:5] for c in classes], dim=0)

@@ -13,7 +13,7 @@ DATASETS_ROOT = path.join(path.dirname(__file__), "datasets")
 
 
 def get_mnist(subset: Literal["train", "test"]) -> MNIST:
-    transform = transforms.Compose([transforms.ToTensor()])
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Pad(2)])
 
     mnist_dataset = MNIST(
         root=DATASETS_ROOT,
@@ -27,7 +27,12 @@ def get_mnist(subset: Literal["train", "test"]) -> MNIST:
 
 class MNISTSampler:
     def __init__(
-        self, mnist: MNIST, classes: tuple[int, ...], batch_size: int, device: str
+        self,
+        mnist: MNIST,
+        classes: tuple[int, ...],
+        batch_size: int,
+        skip_last: bool,
+        device: str,
     ) -> None:
         self.device = device
 
@@ -38,6 +43,7 @@ class MNISTSampler:
         self.max_len = max(len(v) for v in self.indices.values())
 
         self.batch_size = min(batch_size, max(len(v) for v in self.indices.values()))
+        self.skip_last = skip_last
 
         self.batches = max(len(v) // batch_size for v in self.indices.values()) + 1
 
@@ -87,6 +93,14 @@ class MNISTSampler:
                 * self.batch_size
             ]
 
+            # skip last batch that might not be of batchsize
+            if (
+                len(batch_indices) != self.batch_size
+                and self.skip_last
+                and self.batches != 1
+            ):
+                raise StopIteration
+
             sampled_data = tuple(
                 self.data[self.extended_indices[c][batch_indices]].to(self.device)
                 for c in self.classes
@@ -101,7 +115,9 @@ class MNISTSampler:
 
 if __name__ == "__main__":
     ds = get_mnist("train")
-    sampler = MNISTSampler(ds, (0, 1, 2), batch_size=10_000, device="cuda")
+    sampler = MNISTSampler(
+        ds, (0, 1, 2), batch_size=1024, device="cuda", skip_last=True
+    )
 
     for k, v in sampler.indices.items():
         print(k, len(v))
