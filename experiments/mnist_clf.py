@@ -28,9 +28,9 @@ def main():
     device = "cuda:0"
     mnist_shape = (1, 32, 32)
 
-    classes = (0,)
-    anchor_times = torch.tensor([0.0, 1.0], dtype=torch.float32, device=device)
-    path_width = 1.0  # should be dt between classes
+    classes = (0, 1)
+    anchor_times = torch.tensor([0.0, 0.5, 1.0], dtype=torch.float32, device=device)
+    path_width = 0.5
 
     # might mess up classification
     time_class_map = dict(zip(anchor_times.cpu().numpy(), (-1, *classes)))
@@ -52,6 +52,7 @@ def main():
     path = MultiPath(CosineMultiScheduler(k=path_width))
 
     optim = torch.optim.AdamW(net.parameters(), lr=lr)
+    sched = torch.optim.lr_scheduler.StepLR(optim, step_size=epochs // 10, gamma=0.5)
 
     # training
     for _ in (pbar := tqdm(range(epochs))):
@@ -76,6 +77,7 @@ def main():
 
             epoch_loss = epoch_loss + loss
 
+        sched.step()
         pbar.set_description(f"Loss: {(epoch_loss / x_sampler.batches):.3f}")
 
     ema.to_model()
@@ -84,7 +86,7 @@ def main():
     # probability stuff
     integrator = ODEProcess(net, MidpointIntegrator())
     seeker = NaiveMidpoints(max_evals=30, iters=3)
-    ode_steps = 20
+    ode_steps = 100
     log_p0 = log_p0 = Independent(
         Normal(
             torch.zeros(mnist_shape, device=device),
@@ -95,7 +97,7 @@ def main():
 
     # plot path
     t_traj, x_traj = integrator.sample(
-        x_init=torch.randn((1, *mnist_shape), dtype=torch.float32, device=device),
+        x_init=torch.zeros((1, *mnist_shape), dtype=torch.float32, device=device),
         ints=torch.tensor(
             [[anchor_times[0].item(), anchor_times[-1].item()]],
             dtype=torch.float32,
@@ -128,6 +130,7 @@ def main():
     plt.show()
 
     # plot prob
+    ode_steps = 20  # lower steps here cuz we just estimating stuff
     for c in classes:
         indices = x_sampler.indices[classes[c]][:50]
         batch = len(indices)
@@ -143,7 +146,7 @@ def main():
 
         x = x_sampler.data[indices].repeat_interleave(t_steps, dim=0).to(device)
         _, probs = integrator.compute_likelihood(
-            x, intervals, log_p0, steps=ode_steps, est_steps=5
+            x, intervals, log_p0, steps=ode_steps, est_steps=10
         )
 
         plt.gca().invert_xaxis()
