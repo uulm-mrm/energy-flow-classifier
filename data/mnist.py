@@ -111,20 +111,3 @@ class MNISTSampler:
             return sampled_data
 
         raise StopIteration
-
-
-if __name__ == "__main__":
-    ds = get_mnist("train")
-    sampler = MNISTSampler(
-        ds, (0, 1, 2), batch_size=1024, device="cuda", skip_last=True
-    )
-
-    for k, v in sampler.indices.items():
-        print(k, len(v))
-
-    print(sampler.batch_size)
-    print(sampler.batches)
-
-    for _ in range(2):
-        for x1, x2, x3 in sampler:
-            print(x1.shape, x2.shape, x3.shape)

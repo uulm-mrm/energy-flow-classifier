@@ -13,7 +13,10 @@ class DoubleConv(TimeDependentModule):
     def __init__(self, in_c: int, out_c: int, t_dims: int) -> None:
         super().__init__()
 
-        self.res_conv = nn.Conv2d(in_c, out_c, kernel_size=1, padding=0)
+        self.res_conv = cnn.TimeConditionedConv(
+            in_c, out_c, ksize=1, t_dim=t_dims, stride=1, padding=0
+        )
+
         self.conv = TimeDependentSequential(
             cnn.TimeConditionedConv(
                 in_c, out_c, ksize=3, t_dim=t_dims, stride=1, padding=1
@@ -26,7 +29,7 @@ class DoubleConv(TimeDependentModule):
         )
 
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
-        h = self.conv(x, t) + self.res_conv(x)
+        h = self.conv(x, t) + self.res_conv(x, t)
         return F.relu(h)
 
 
