@@ -26,7 +26,7 @@ def main():
     # consts
     device = "cuda:0"
     mnist_shape = (1, 32, 32)
-    classes = tuple(range(5))
+    classes = tuple(range(3))
 
     num_classes = len(classes)
     r = 5.0
@@ -48,7 +48,7 @@ def main():
     )
 
     # model stuff
-    net = UNet(in_c=1, out_c=1, features=[64, 128, 256], t_dims=t_dims).to(device)
+    net = UNet(in_c=1, out_c=1, features=[32, 64, 128], t_dims=t_dims).to(device)
     ema = EMA(net, rate=0.999)
     path = AffineMultiPath(AffinePath(CosineScheduler()), num_classes)
 
@@ -61,8 +61,8 @@ def main():
         for x in mnist_sampler:
             optim.zero_grad()
 
-            x0 = multi_normal.sample(x[0].shape[0])
-            x1 = torch.stack(x, dim=0)
+            x1 = multi_normal.sample(x[0].shape[0])
+            x0 = torch.stack(x, dim=0)
             t = torch.rand((x[0].shape[0],), dtype=torch.float32, device=device)
 
             path_sample = path.sample(x0, x1, t)
@@ -87,7 +87,7 @@ def main():
 
     _, x_traj = proc.sample(
         multi_normal.means,
-        ints=torch.tensor([[0.0, 1.0]], dtype=torch.float32, device=device),
+        ints=torch.tensor([[1.0, 0.0]], dtype=torch.float32, device=device),
         steps=ode_steps,
     )
 
@@ -96,14 +96,6 @@ def main():
     for i, sol in enumerate(sols):
         plt.imshow(sol[0], "gray")
         plt.savefig(f"./plots/sol{i}.jpg")
-
-    # classify a couple of samples
-    # indices = torch.cat(
-    #     [mnist_sampler.indices[0][:1], mnist_sampler.indices[1][:1]], dim=0
-    # )
-    # x = mnist_sampler.data[indices]
-
-    # intervals = torch.tensor([[1.0, 0.0]])
 
 
 if __name__ == "__main__":
