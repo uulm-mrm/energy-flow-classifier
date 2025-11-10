@@ -61,8 +61,9 @@ def main():
         for x in mnist_sampler:
             optim.zero_grad()
 
-            x1 = multi_normal.sample(x[0].shape[0])
+            # flow from images to noise. should be better than reverse
             x0 = torch.stack(x, dim=0)
+            x1 = multi_normal.sample(x[0].shape[0])
             t = torch.rand((x[0].shape[0],), dtype=torch.float32, device=device)
 
             path_sample = path.sample(x0, x1, t)
@@ -81,6 +82,8 @@ def main():
 
     ema.to_model()
     net = net.eval()
+
+    torch.save(net.state_dict(), f"trained/mnist_{num_classes}.pt")
 
     proc = ODEProcess(net, RungeKuttaIntegrator(RK4_TABLEAU, device=device))
     ode_steps = 100
