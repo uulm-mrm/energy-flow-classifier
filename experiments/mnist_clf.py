@@ -145,8 +145,9 @@ def test():
     for sol in sols:
         plt.imshow(sol[0], "gray")
         plt.show()
+    # ======
 
-    # predict
+    # accuracy
     for c in classes:
         x_pred = mnist_sampler.data[mnist_sampler.indices[c]].to(device)
         intervals = torch.tensor(
@@ -158,6 +159,34 @@ def test():
         probs = multi_normal.log_likelihood(sols)
         print(f"Class {c} elements: {x_pred.shape[0]}")
         print(f"Correctly classified: {torch.sum(probs.argmax(dim=1) == c).item()}")
+    # ======
+
+    # random subset of in dataset data
+    x_pred = mnist_sampler.data[:10].to(device)
+    intervals = torch.tensor([[0.0, 1.0]], dtype=torch.float32, device=device).expand(
+        x_pred.shape[0], 2
+    )
+
+    _, x_traj = proc.sample(x_pred, intervals, steps=ode_steps)
+    sols = x_traj[-1]
+    probs = multi_normal.log_likelihood(sols)
+
+    for img, prob in zip(x_pred, probs):
+        plt.imshow(img[0].detach().cpu(), "gray")
+        plt.show()
+        print(prob)
+    # ======
+
+    # very much ood
+    x_pred = torch.randn(size=(10, *mnist_shape), dtype=torch.float32, device=device)
+    intervals = torch.tensor([[0.0, 1.0]], dtype=torch.float32, device=device).expand(
+        x_pred.shape[0], 2
+    )
+
+    _, x_traj = proc.sample(x_pred, intervals, steps=ode_steps)
+    sols = x_traj[-1]
+    probs = multi_normal.log_likelihood(sols)
+    print(probs)
 
 
 if __name__ == "__main__":

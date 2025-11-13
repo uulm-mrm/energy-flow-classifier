@@ -13,7 +13,9 @@ DATASETS_ROOT = path.join(path.dirname(__file__), "datasets")
 
 
 def get_mnist(subset: Literal["train", "test"]) -> MNIST:
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Pad(2)])
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Pad(2), lambda x: x * 2.0 - 1.0]
+    )
 
     mnist_dataset = MNIST(
         root=DATASETS_ROOT,
