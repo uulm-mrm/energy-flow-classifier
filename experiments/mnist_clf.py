@@ -40,7 +40,7 @@ def train():
     batch_size = 512
     t_dims = 256
     lr = 1e-3
-    epochs = 5000
+    epochs = 1024
 
     # dataset
     mnist = get_mnist("train")
@@ -58,6 +58,7 @@ def train():
     path = AffineMultiPath(AffinePath(CosineScheduler()), num_classes)
 
     optim = torch.optim.AdamW(net.parameters(), lr=lr)
+    losses = []
 
     # training
     for _ in (pbar := tqdm(range(epochs))):
@@ -83,14 +84,18 @@ def train():
 
             ema.update_ema_t()
 
-            epoch_loss = epoch_loss + loss
+            epoch_loss = epoch_loss + loss.item()
 
+        losses.append(epoch_loss / mnist_sampler.batches)
         pbar.set_description(f"Loss: {(epoch_loss / mnist_sampler.batches):.3f}")
 
     ema.to_model()
     net = net.eval()
 
     torch.save(net.state_dict(), f"trained/mnist_{num_classes}.pt")
+
+    plt.plot(losses)
+    plt.show()
 
 
 def test():
@@ -112,7 +117,7 @@ def test():
     t_dims = 256
 
     # dataset
-    mnist = get_mnist("train")
+    mnist = get_mnist("test")
     mnist_sampler = MNISTSampler(
         mnist, classes=classes, batch_size=batch_size, device=device, skip_last=True
     )
@@ -130,8 +135,7 @@ def test():
     ode_steps = 100
 
     # generate
-    # x_noise = multi_normal.means
-    x_noise = multi_normal.sample(3).reshape((-1, *mnist_shape))
+    x_noise = multi_normal.means
     intervals = torch.tensor([[1.0, 0.0]], dtype=torch.float32, device=device).expand(
         x_noise.shape[0], 2
     )
@@ -143,16 +147,17 @@ def test():
         plt.show()
 
     # predict
-    x_pred = mnist_sampler.data[mnist_sampler.indices[0]].to(device)
-    intervals = torch.tensor([[0.0, 1.0]], dtype=torch.float32, device=device).expand(
-        x_pred.shape[0], 2
-    )
+    for c in classes:
+        x_pred = mnist_sampler.data[mnist_sampler.indices[c]].to(device)
+        intervals = torch.tensor(
+            [[0.0, 1.0]], dtype=torch.float32, device=device
+        ).expand(x_pred.shape[0], 2)
 
-    _, x_traj = proc.sample(x_pred, intervals, steps=ode_steps)
-    sols = x_traj[-1]
-    probs = multi_normal.log_likelihood(sols)
-    print(x_pred.shape[0])
-    print(torch.sum(probs.argmax(dim=1) == 0))
+        _, x_traj = proc.sample(x_pred, intervals, steps=ode_steps)
+        sols = x_traj[-1]
+        probs = multi_normal.log_likelihood(sols)
+        print(f"Class {c} elements: {x_pred.shape[0]}")
+        print(f"Correctly classified: {torch.sum(probs.argmax(dim=1) == c).item()}")
 
 
 if __name__ == "__main__":
