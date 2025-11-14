@@ -8,7 +8,7 @@ class __Config:
 
     # data consts
     shape = (1, 32, 32)
-    classes = tuple(range(5))
+    classes = tuple(range(10))
     num_classes = len(classes)
     k = 3.0
 
@@ -19,7 +19,7 @@ class __Config:
     batch_size = 512
     t_dims = 256
     lr = 1e-3
-    epochs = 1024
+    epochs = 256
 
 
 CONFIG = __Config

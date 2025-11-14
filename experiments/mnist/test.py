@@ -136,9 +136,9 @@ def test():
 
     # generate(multi_normal, proc, ode_steps)
     # accuracy(mnist_sampler, multi_normal, proc, ode_steps)
-    random_from_dataset(mnist_sampler, multi_normal, proc, ode_steps)
+    # random_from_dataset(mnist_sampler, multi_normal, proc, ode_steps)
     random_from_dataset(fashion_sampler, multi_normal, proc, ode_steps)
-    # random_noise(multi_normal, proc, ode_steps)
+    random_noise(multi_normal, proc, ode_steps)
 
 
 if __name__ == "__main__":
