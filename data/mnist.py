@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 
 from torchvision import transforms
-from torchvision.datasets import MNIST
+from torchvision.datasets import MNIST, FashionMNIST
 
 DATASETS_ROOT = path.join(path.dirname(__file__), "datasets")
 
@@ -18,6 +18,21 @@ def get_mnist(subset: Literal["train", "test"]) -> MNIST:
     )
 
     mnist_dataset = MNIST(
+        root=DATASETS_ROOT,
+        train=(subset == "train"),
+        download=True,
+        transform=transform,
+    )
+
+    return mnist_dataset
+
+
+def get_fashion_mnist(subset: Literal["train", "test"]) -> FashionMNIST:
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Pad(2), lambda x: x * 2.0 - 1.0]
+    )
+
+    mnist_dataset = FashionMNIST(
         root=DATASETS_ROOT,
         train=(subset == "train"),
         download=True,

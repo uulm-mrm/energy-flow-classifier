@@ -33,11 +33,7 @@ def train():
     )
 
     multi_normal = MultiIndependentNormal(
-        c=CONFIG.num_classes,
-        shape=CONFIG.shape,
-        r=CONFIG.r,
-        sigma=CONFIG.sigma,
-        device=CONFIG.device,
+        c=CONFIG.num_classes, shape=CONFIG.shape, k=CONFIG.k, device=CONFIG.device
     )
 
     # model stuff
@@ -68,7 +64,6 @@ def train():
             loss = (dxt_hat - path_sample.dxt).square().mean()
 
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=10.0)
 
             optim.step()
 

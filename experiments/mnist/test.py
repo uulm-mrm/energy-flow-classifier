@@ -11,7 +11,7 @@ from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
 
 from models.unet import UNet
 
-from data.mnist import get_mnist, MNISTSampler
+from data.mnist import get_mnist, get_fashion_mnist, MNISTSampler
 
 from experiments.mnist.consts import CONFIG
 
@@ -39,6 +39,8 @@ def accuracy(
     proc: ODEProcess,
     ode_steps: int,
 ):
+    argmax_cls = {c: i for i, c in enumerate(CONFIG.classes)}
+
     for c in CONFIG.classes:
         x_pred = data_sampler.data[data_sampler.indices[c]].to(CONFIG.device)
         intervals = torch.tensor(
@@ -49,12 +51,14 @@ def accuracy(
         sols = x_traj[-1]
         probs = noise_sampler.log_likelihood(sols)
         print(f"Class {c} elements: {x_pred.shape[0]}")
-        print(f"Correctly classified: {torch.sum(probs.argmax(dim=1) == c).item()}")
+        print(
+            f"Correctly classified: {torch.sum(probs.argmax(dim=-1) == argmax_cls[c]).item()}"
+        )
 
     return
 
 
-def random_in_dataset(
+def random_from_dataset(
     data_sampler: MNISTSampler,
     noise_sampler: MultiIndependentNormal,
     proc: ODEProcess,
@@ -105,13 +109,20 @@ def test():
         skip_last=True,
     )
 
-    multi_normal = MultiIndependentNormal(
-        c=CONFIG.num_classes,
-        shape=CONFIG.shape,
-        r=CONFIG.r,
-        sigma=CONFIG.sigma,
+    fashion_mnist = get_fashion_mnist("test")
+    fashion_sampler = MNISTSampler(
+        fashion_mnist,
+        classes=CONFIG.classes,
+        batch_size=CONFIG.batch_size,
         device=CONFIG.device,
+        skip_last=True,
     )
+
+    multi_normal = MultiIndependentNormal(
+        c=CONFIG.num_classes, shape=CONFIG.shape, k=CONFIG.k, device=CONFIG.device
+    )
+    print(multi_normal.means)
+    print(multi_normal.sigma)
 
     net = UNet(in_c=1, out_c=1, features=CONFIG.features, t_dims=CONFIG.t_dims).to(
         CONFIG.device
@@ -123,9 +134,10 @@ def test():
     proc = ODEProcess(net, RungeKuttaIntegrator(RK4_TABLEAU, device=CONFIG.device))
     ode_steps = 100
 
-    generate(multi_normal, proc, ode_steps)
+    # generate(multi_normal, proc, ode_steps)
     # accuracy(mnist_sampler, multi_normal, proc, ode_steps)
-    # random_in_dataset(mnist_sampler, multi_normal, proc, ode_steps)
+    random_from_dataset(mnist_sampler, multi_normal, proc, ode_steps)
+    random_from_dataset(fashion_sampler, multi_normal, proc, ode_steps)
     # random_noise(multi_normal, proc, ode_steps)
 
 
