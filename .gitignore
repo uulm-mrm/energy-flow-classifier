@@ -2,6 +2,7 @@
 /data/datasets/*
 trained
 plots
+misc
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
