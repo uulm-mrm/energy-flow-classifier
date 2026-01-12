@@ -21,3 +21,7 @@ NUIM_DATASET_ROOT = os.path.join(DATASET_DIR, "nuimages_mini")
 FEATURES_DATASET_DIR = os.path.join(
     DATASET_DIR, NUIM_DATASET_VERSION + "-frame_features"
 )
+
+# numerical consts
+# 0.75 bcs we want really good boxes for features and not mostly good features with 0.5
+IOU_THRESH = 0.75

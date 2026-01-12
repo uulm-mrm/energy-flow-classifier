@@ -43,6 +43,10 @@ def main():
     ) as f:
         f.write(json.dumps(category_to_name))
 
+    # lookup table for quicker indexing later on
+    lut = {"fnames": [], "offsets": []}
+    offset = 0
+
     # loop over images
     for sample_data in tqdm(nuim.sample_data, desc="Iterating Samples"):
 
@@ -71,7 +75,11 @@ def main():
 
         # get max ious for filtering
         max_ious, max_idx = ious.max(dim=1)
-        iou_thresh = max_ious >= 0.75
+        iou_thresh = max_ious >= c.IOU_THRESH
+
+        if torch.all(~iou_thresh):
+            print(f"No overlap between boxes in {sample_data["filename"]}")
+            continue
 
         # filter features and labels
         labels = gt.labels[max_idx][iou_thresh]  # [gt,] -> [roi,] -> [best fit]
@@ -84,6 +92,19 @@ def main():
         fname = sample_data["filename"].split("/")[-1][:-3] + "pt"
 
         torch.save(frame.__dict__, os.path.join(c.FEATURES_DATASET_DIR, fname))
+
+        # update LuT
+        offset += frame.labels.shape[0]
+        lut["fnames"].append(fname)
+        lut["offsets"].append(offset)
+
+    # write lookup table
+    with open(
+        os.path.join(c.FEATURES_DATASET_DIR, "index_lookup_table.json"),
+        "w+",
+        encoding="utf-8",
+    ) as f:
+        f.write(json.dumps(lut))
 
 
 if __name__ == "__main__":
