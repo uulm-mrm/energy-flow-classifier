@@ -1,4 +1,5 @@
 import os
+import json
 
 from tqdm import tqdm
 
@@ -17,6 +18,9 @@ from nuimg.data.utils import category_mappings, get_sample_data_gt
 
 
 def main():
+    # make dir to save data
+    os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
+
     nuim = NuImages(
         c.NUIM_DATASET_VERSION, c.NUIM_DATASET_ROOT, verbose=True, lazy=True
     )
@@ -24,7 +28,20 @@ def main():
         labels=list(c.COCO_ID_CATEGORIES.values()), device=torch.device("cuda")
     )
 
-    nuim_tokens_to_category, _ = category_mappings(nuim)
+    # make and save label mappings
+    nuim_tokens_to_category, category_to_name = category_mappings(nuim)
+
+    with open(
+        os.path.join(c.FEATURES_DATASET_DIR, "token_to_cat.json"),
+        "w+",
+        encoding="utf-8",
+    ) as f:
+        f.write(json.dumps(nuim_tokens_to_category))
+
+    with open(
+        os.path.join(c.FEATURES_DATASET_DIR, "cat_to_name.json"), "w+", encoding="utf-8"
+    ) as f:
+        f.write(json.dumps(category_to_name))
 
     # loop over images
     for sample_data in tqdm(nuim.sample_data, desc="Iterating Samples"):
@@ -66,7 +83,6 @@ def main():
         # loaded as a dict {"features": Tensor, "labels": Tensor}
         fname = sample_data["filename"].split("/")[-1][:-3] + "pt"
 
-        os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
         torch.save(frame.__dict__, os.path.join(c.FEATURES_DATASET_DIR, fname))
 
 
