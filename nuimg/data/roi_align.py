@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 from torch import nn, Tensor
 
@@ -5,9 +6,26 @@ import torchvision
 from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2
 from torchvision.models.detection.image_list import ImageList
 
+from nuimg.data.model import RoIs
+
 
 class RoIAlignExtractor(nn.Module):
-    def __init__(self, score_thresh=0.5, device=None, box_size=7):
+    def __init__(
+        self,
+        labels: list[int],
+        score_thresh=0.5,
+        device: Optional[torch.device] = None,
+        box_size=7,
+    ):
+        """Extracts RoI Align features from the FasterRCNN net with a ResNet50 FPN backbone
+        trained on COCO
+
+        Args:
+            labels (list[int]): which labels to look for.
+            score_thresh (float, optional): min threshold for a prediction. Defaults to 0.5.
+            device (Optional[torch.device], optional): device which to use. Defaults to None.
+            box_size (int, optional): size of boxes from RoI align. Defaults to 7.
+        """
         super().__init__()
 
         weights = (
@@ -18,6 +36,7 @@ class RoIAlignExtractor(nn.Module):
 
         self.score_thresh = score_thresh
         self.box_size = box_size
+
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
@@ -25,16 +44,15 @@ class RoIAlignExtractor(nn.Module):
 
         self.preproc = weights.transforms()
 
-    def forward(self, img: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        self.labels = torch.tensor(labels).to(self.device)
+
+    def forward(self, img: Tensor) -> Optional[RoIs]:
         """
         Args:
             img (Tensor): uint8 tensor of shape [3, H, W]
 
         Returns:
-            retval[0]: [rois, 256, 7, 7]
-            retval[1]: [rois, 4]
-            retval[2]: [rois]
-            retval[3]: [rois]
+            Optional[RoIs]: RoIs object or None if no rois found
         """
 
         # preproc
@@ -68,22 +86,25 @@ class RoIAlignExtractor(nn.Module):
         labels = det["labels"]
 
         # filter by score threshold
-        keep = scores >= self.score_thresh
+        keep_labels = torch.isin(labels, self.labels, assume_unique=False, invert=False)
+        keep_scores = scores >= self.score_thresh
+        keep = keep_labels & keep_scores
+
         boxes = boxes[keep]
         scores = scores[keep]
         labels = labels[keep]
 
         # align boxes
         if len(boxes) == 0:
-            return (
-                torch.empty((0, 256, self.box_size, self.box_size)),
-                boxes,
-                scores,
-                labels,
-            )
+            return None
 
         roi_features = self.model.roi_heads.box_roi_pool(
             features, [boxes], image_list.image_sizes
         )  # type: ignore
 
-        return roi_features, boxes, scores, labels
+        return RoIs(
+            features=roi_features.cpu(),
+            boxes=boxes.cpu(),
+            scores=scores.cpu(),
+            labels=labels.cpu(),
+        )
