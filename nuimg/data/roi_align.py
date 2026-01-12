@@ -46,6 +46,7 @@ class RoIAlignExtractor(nn.Module):
 
         self.labels = torch.tensor(labels).to(self.device)
 
+    @torch.no_grad()
     def forward(self, img: Tensor) -> Optional[RoIs]:
         """
         Args:
@@ -73,10 +74,9 @@ class RoIAlignExtractor(nn.Module):
         proposals = proposals[0]
 
         # detector head part
-        with torch.no_grad():
-            detections, _ = self.model.roi_heads(
-                features, [proposals], image_list.image_sizes
-            )
+        detections, _ = self.model.roi_heads(
+            features, [proposals], image_list.image_sizes
+        )
 
         # same as with proposals, we get a dict of detections per image
         # and we only have an image

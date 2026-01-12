@@ -6,18 +6,18 @@ from torch import Tensor
 @dataclass
 class GroundTruth:
     boxes: Tensor  # [n, 4]; xmin, ymin, xmax, ymax
-    labels: Tensor
+    labels: Tensor  # [n, 1]
 
 
 @dataclass
 class RoIs:
     features: Tensor  # [n, 256, 7, 7]
     boxes: Tensor  # [n, 4]; xmin, ymin, xmax, ymax
-    scores: Tensor  # [n,]
-    labels: Tensor  # [n,]
+    scores: Tensor  # [n, 1]
+    labels: Tensor  # [n, 1]
 
 
 @dataclass
 class LabeledFrame:
     features: Tensor  # [n, 256, 7, 7]
-    labels: Tensor  # [n,]
+    labels: Tensor  # [n, 1]

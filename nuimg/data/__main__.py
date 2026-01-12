@@ -26,8 +26,6 @@ def main():
 
     nuim_tokens_to_category, _ = category_mappings(nuim)
 
-    labeled_frames: list[m.LabeledFrame] = []
-
     # loop over images
     for sample_data in tqdm(nuim.sample_data, desc="Iterating Samples"):
 
@@ -44,8 +42,7 @@ def main():
 
         # extract features using FRCNN from image
         img = decode_image(os.path.join(c.NUIM_DATASET_ROOT, sample_data["filename"]))
-        with torch.no_grad():
-            rois = extractor.forward(img)
+        rois = extractor.forward(img)
 
         if not rois:
             print(f"No RoIs extracted in {sample_data["filename"]}")
@@ -64,10 +61,13 @@ def main():
         features = rois.features[iou_thresh]  # [roi,] -> [best fit]
 
         frame = m.LabeledFrame(features=features, labels=labels)
-        labeled_frames.append(frame)
 
         # save labeled frame under filename
-        # os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
+        # loaded as a dict {"features": Tensor, "labels": Tensor}
+        fname = sample_data["filename"].split("/")[-1][:-3] + "pt"
+
+        os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
+        torch.save(frame.__dict__, os.path.join(c.FEATURES_DATASET_DIR, fname))
 
 
 if __name__ == "__main__":
