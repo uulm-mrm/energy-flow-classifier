@@ -1,6 +1,15 @@
+# pylint: disable=W0201
+
 import os
 import json
 from bisect import bisect_right
+from collections import defaultdict
+from math import ceil
+
+import torch
+from torch import Tensor
+
+from nuimg.data.consts import FEATURES_DATASET_DIR
 
 
 class RoIFeatureDataset:
@@ -38,14 +47,85 @@ class RoIFeatureDataset:
         return self.fnames[file_idx], idx - lower
 
 
-def main():
-    from nuimg.data.consts import FEATURES_DATASET_DIR
+class RoIFeatureDataLoader:
+    def __init__(
+        self,
+        dataset: RoIFeatureDataset,
+        batch_size: int,
+        shuffle: bool,
+        skip_last: bool,
+        device: torch.device | None = None,
+    ) -> None:
 
-    ds = RoIFeatureDataset(os.path.join(FEATURES_DATASET_DIR))
+        self.dataset = dataset
 
-    for i in [1, 17, 0, 5, 2, 82]:
-        print(ds[i])
+        self.batch_size = min(batch_size, len(dataset))
 
+        self.shuffle = shuffle
+        self.skip_last = skip_last
 
-if __name__ == "__main__":
-    main()
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+
+    def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
+        """Takes a list of indices in fname and returns features and labels associated to them"""
+        frame: dict[str, Tensor] = torch.load(os.path.join(FEATURES_DATASET_DIR, fname))
+
+        return frame["features"][idxs], frame["labels"][idxs]
+
+    def __iter__(self):
+        # __iter__ is what's done at startup of iteration
+
+        if self.shuffle:
+            self.indices = torch.randperm(len(self.dataset)).tolist()
+        else:
+            self.indices = list(range(len(self.dataset)))
+
+        if self.skip_last:
+            self.num_batches = len(self.indices) // self.batch_size
+        else:
+            self.num_batches = ceil(len(self.indices) / self.batch_size)
+
+        self.current_batch = 0
+
+        return self
+
+    def __next__(self) -> tuple[Tensor, Tensor]:
+        # __next__ is what's done at each iteration point
+
+        # check exit
+        if self.current_batch >= self.num_batches:
+            raise StopIteration
+
+        # take out batch_size indices
+        start = self.current_batch * self.batch_size
+        end = start + self.batch_size
+
+        batch_indices = self.indices[start:end]
+
+        # update batch ctr
+        self.current_batch += 1
+
+        # group by fname
+        fname_map: dict[str, list[int]] = defaultdict(list)
+
+        for idx in batch_indices:
+            fname, local_idx = self.dataset[idx]
+            fname_map[fname].append(local_idx)
+
+        # load data
+        features: list[Tensor] = []
+        labels: list[Tensor] = []
+
+        for fname, idxs in fname_map.items():
+            feats, labs = self.get_from_file(fname, idxs)
+
+            features.append(feats)
+            labels.append(labs)
+
+        # return and push to device
+        return (
+            torch.cat(features, dim=0).to(self.device),
+            torch.cat(labels, dim=0).to(self.device),
+        )
