@@ -6,7 +6,7 @@ misc
 
 # nuimg stuff
 /nuimg/data/*-data_export.log
-/nuimgs/data/consts.py
+/nuimg/data/consts.py
 /nuimg/dataset
 /nuimg/trained_models
 /nuimg/consts.py
