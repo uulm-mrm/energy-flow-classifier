@@ -44,6 +44,7 @@ def evaluate():
     # process setup
     proc = ODEProcess(unet, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
 
+    total_true_positives = 0
     for x, y in dataloader:
         intervals = torch.tensor(
             [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
@@ -54,7 +55,12 @@ def evaluate():
         probs = noise.log_likelihood(sols)
 
         preds = torch.argmax(probs, dim=1)
-        print(f"Accuracy: {sum(preds == y.reshape(-1))}/{y.shape[0]}")
+        true_positives = sum(preds == y.reshape(-1))
+        total_true_positives += true_positives
+
+        print(f"Batch Accuracy: {true_positives}/{y.shape[0]}")
+
+    print(f"Total Accuracy: {(total_true_positives / len(dataset)):.4f}")
 
 
 if __name__ == "__main__":
