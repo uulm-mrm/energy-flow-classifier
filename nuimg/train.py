@@ -56,6 +56,8 @@ def train():
             optim.zero_grad()
 
             # sort data per category
+            # TODO: no need to sort, just in sample arbitrary pass y to apply means accordingly
+            # but this actually costs nothing
             x_data, y = dataset.sort_per_category(x, y.reshape(-1))
 
             # sample noise
@@ -63,7 +65,7 @@ def train():
             x_noise = noise.sample_arbitrary(*counts)
 
             # sample time
-            t = torch.rand((c.BATCH_SIZE,), dtype=x_data.dtype, device=x_data.device)
+            t = torch.rand((x_data.shape[0],), dtype=x_data.dtype, device=x_data.device)
 
             # sample and predict path
             path_sample = path.sample(x_noise, x_data, t=t)

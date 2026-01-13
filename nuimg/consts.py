@@ -30,3 +30,6 @@ EPOCHS = 1_000
 # save trained model setup
 SAVE_DIR = os.path.join(os.path.dirname(__file__), "trained_models")
 SAVE_NAME = "test_model"  # without .pt
+
+# eval setup
+ODE_STEPS = 100

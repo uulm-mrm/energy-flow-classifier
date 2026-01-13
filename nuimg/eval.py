@@ -1,0 +1,61 @@
+import os
+
+import torch
+
+from flow_matching.flow_matching.distributions import MultiIndependentNormal
+from flow_matching.flow_matching import ODEProcess, RungeKuttaIntegrator
+from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
+
+from nuimg.data import RoIFeatureDataset, RoIFeatureDataLoader, FEATURES_DATASET_DIR
+import nuimg.consts as c
+
+from models.unet import UNet
+
+
+def evaluate():
+    torch.manual_seed(42)
+
+    # dataset and dataloader
+    # TODO: add test set
+    dataset = RoIFeatureDataset(dataset_dir=FEATURES_DATASET_DIR)
+    dataloader = RoIFeatureDataLoader(
+        dataset,
+        batch_size=c.BATCH_SIZE,
+        shuffle=c.SHUFFLE,
+        skip_last=c.SKIP_LAST,
+        device=c.DEVICE,
+    )
+
+    # noise setup
+    noise = MultiIndependentNormal(
+        c=c.CLASSES,
+        shape=c.SHAPE,
+        k=c.K,
+        device=c.DEVICE,  # type: ignore
+    )
+
+    # load model
+    unet = UNet(
+        in_c=c.SHAPE[0], out_c=c.SHAPE[0], features=c.FEATURES, t_dims=c.T_DIMS
+    ).to(c.DEVICE)
+    unet.load_state_dict(torch.load(os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt")))
+    unet.eval()
+
+    # process setup
+    proc = ODEProcess(unet, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
+
+    for x, y in dataloader:
+        intervals = torch.tensor(
+            [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
+        ).expand(x.shape[0], 2)
+
+        _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
+        sols = x_traj[-1]
+        probs = noise.log_likelihood(sols)
+
+        preds = torch.argmax(probs, dim=1)
+        print(f"Accuracy: {sum(preds == y.reshape(-1))}/{y.shape[0]}")
+
+
+if __name__ == "__main__":
+    evaluate()
