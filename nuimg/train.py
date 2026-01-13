@@ -56,8 +56,6 @@ def train():
             optim.zero_grad()
 
             # sort data per category
-            # TODO: no need to sort, just in sample arbitrary pass y to apply means accordingly
-            # but this actually costs nothing
             x_data, y = dataset.sort_per_category(x, y.reshape(-1))
 
             # sample noise

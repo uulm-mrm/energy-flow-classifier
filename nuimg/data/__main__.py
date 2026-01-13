@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 
 from tqdm import tqdm
 
@@ -15,6 +16,17 @@ import nuimg.data.model as m
 
 from nuimg.data.roi_align import RoIAlignExtractor
 from nuimg.data.utils import category_mappings, get_sample_data_gt
+
+
+logging.basicConfig(
+    filename=os.path.join(
+        os.path.dirname(__file__), f"{c.NUIM_DATASET_VERSION}-data_export.log"
+    ),
+    filemode="w",
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def main():
@@ -58,7 +70,7 @@ def main():
         gt = get_sample_data_gt(nuim, sample_data["token"], nuim_tokens_to_category)
 
         if not gt:
-            print(f"No boxes in {sample_data["filename"]}")
+            logging.info("No boxes in %s", sample_data["filename"])
             continue
 
         # extract features using FRCNN from image
@@ -66,7 +78,7 @@ def main():
         rois = extractor.forward(img)
 
         if not rois:
-            print(f"No RoIs extracted in {sample_data["filename"]}")
+            logging.info("No RoIs extracted in %s", sample_data["filename"])
             continue
 
         # match FRCNN boxes of features to GT features
@@ -78,7 +90,7 @@ def main():
         iou_thresh = max_ious >= c.IOU_THRESH
 
         if torch.all(~iou_thresh):
-            print(f"No overlap between boxes in {sample_data["filename"]}")
+            logging.info("No overlap between boxes in %s", sample_data["filename"])
             continue
 
         # filter features and labels

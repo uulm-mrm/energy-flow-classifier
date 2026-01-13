@@ -3,6 +3,9 @@
 trained
 plots
 misc
+
+# nuimg stuff
+/nuimg/data/*-data_export.log
 /nuimg/dataset
 /nuimg/trained_models
 
