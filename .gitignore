@@ -4,6 +4,7 @@ trained
 plots
 misc
 /nuimg/dataset
+/nuimg/trained_models
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

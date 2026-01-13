@@ -1,2 +1,2 @@
-import nuimg.data.consts
+from nuimg.data.consts import *
 from nuimg.data.dataset import RoIFeatureDataset, RoIFeatureDataLoader

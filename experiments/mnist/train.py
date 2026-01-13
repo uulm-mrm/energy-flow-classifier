@@ -4,10 +4,7 @@ import matplotlib.pyplot as plt
 
 import torch
 
-from flow_matching.flow_matching import (
-    AffineMultiPath,
-    AffinePath,
-)
+from flow_matching.flow_matching import AffineMultiPath, AffinePath
 from flow_matching.flow_matching.distributions import MultiIndependentNormal
 from flow_matching.flow_matching.scheduler import CosineScheduler
 from flow_matching.modules.utils import EMA
