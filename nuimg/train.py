@@ -35,7 +35,12 @@ def train():
     )
 
     # noise setup
-    noise = MultiIndependentNormal(c=c.CLASSES, shape=c.SHAPE, k=c.K, device=c.DEVICE)  # type: ignore
+    noise = MultiIndependentNormal(
+        c=c.CLASSES,
+        shape=c.SHAPE,
+        k=c.K,
+        device=c.DEVICE,  # type: ignore
+    )
 
     # flow matching setup
     unet = UNet(
