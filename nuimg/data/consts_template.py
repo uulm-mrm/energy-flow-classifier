@@ -15,7 +15,7 @@ COCO_OOD_CATEGORIES = []
 # dataset consts
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "..", "dataset")
 
-NUIM_DATASET_VERSION = "v1.0-mini"
+NUIM_DATASET_VERSION = "v1.0-train"
 NUIM_DATASET_ROOT = os.path.join(DATASET_DIR, "nuimages-v1.0")
 
 FEATURES_DATASET_DIR = os.path.join(
