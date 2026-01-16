@@ -64,7 +64,6 @@ def evaluate():
         total_points += y.shape[0]
 
         pbar.set_description(f"Batch Accuracy: {true_positives}/{y.shape[0]}")
-        break
 
     print(f"Total Accuracy: {(total_true_positives / total_points):.4f}")
 

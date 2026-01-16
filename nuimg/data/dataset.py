@@ -13,7 +13,7 @@ from nuimg.data.consts import FEATURES_DATASET_DIR
 
 
 class RoIFeatureDataset:
-    def __init__(self, dataset_dir: str) -> None:
+    def __init__(self, dataset_dir: str, samples: int | None = None) -> None:
         super().__init__()
 
         self.dataset_dir = dataset_dir
@@ -24,8 +24,9 @@ class RoIFeatureDataset:
         ) as f:
             lut = json.loads(f.read())
 
-        self.fnames = lut["fnames"]
-        self.offsets = lut["offsets"]
+        # [:None] is just like [:] so this is okay when sampling
+        self.fnames = lut["fnames"][:samples]
+        self.offsets = lut["offsets"][:samples]
 
         # get the classes metadata json
         with open(
@@ -161,8 +162,3 @@ class RoIFeatureDataLoader:
             torch.cat(features, dim=0).to(self.device),
             torch.cat(labels, dim=0).to(self.device),
         )
-
-
-if __name__ == "__main__":
-    dataset = RoIFeatureDataset(FEATURES_DATASET_DIR)
-    print(len(dataset))
