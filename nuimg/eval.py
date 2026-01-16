@@ -1,5 +1,7 @@
 import os
 
+from tqdm import tqdm
+
 import torch
 
 from flow_matching.flow_matching.distributions import MultiIndependentNormal
@@ -16,7 +18,6 @@ def evaluate():
     torch.manual_seed(42)
 
     # dataset and dataloader
-    # TODO: add test set
     dataset = RoIFeatureDataset(dataset_dir=FEATURES_DATASET_DIR)
     dataloader = RoIFeatureDataLoader(
         dataset,
@@ -28,9 +29,10 @@ def evaluate():
 
     # noise setup
     noise = MultiIndependentNormal(
-        c=c.CLASSES,
+        n=c.CLASSES,
         shape=c.SHAPE,
-        k=c.K,
+        r=c.R,
+        var=c.VAR,
         device=c.DEVICE,  # type: ignore
     )
 
@@ -45,7 +47,9 @@ def evaluate():
     proc = ODEProcess(unet, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
 
     total_true_positives = 0
-    for x, y in dataloader:
+    total_points = 0
+
+    for x, y in (pbar := tqdm(dataloader)):
         intervals = torch.tensor(
             [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
         ).expand(x.shape[0], 2)
@@ -57,10 +61,12 @@ def evaluate():
         preds = torch.argmax(probs, dim=1)
         true_positives = sum(preds == y.reshape(-1))
         total_true_positives += true_positives
+        total_points += y.shape[0]
 
-        print(f"Batch Accuracy: {true_positives}/{y.shape[0]}")
+        pbar.set_description(f"Batch Accuracy: {true_positives}/{y.shape[0]}")
+        break
 
-    print(f"Total Accuracy: {(total_true_positives / len(dataset)):.4f}")
+    print(f"Total Accuracy: {(total_true_positives / total_points):.4f}")
 
 
 if __name__ == "__main__":

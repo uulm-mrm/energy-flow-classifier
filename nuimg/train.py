@@ -2,8 +2,6 @@ import os
 
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt
-
 import torch
 
 from flow_matching.flow_matching import AffinePath
@@ -36,9 +34,10 @@ def train():
 
     # noise setup
     noise = MultiIndependentNormal(
-        c=c.CLASSES,
+        n=c.CLASSES,
         shape=c.SHAPE,
-        k=c.K,
+        r=c.R,
+        var=c.VAR,
         device=c.DEVICE,  # type: ignore
     )
 
@@ -65,7 +64,7 @@ def train():
 
             # sample noise
             counts = dataset.counts_per_category(y)
-            x_noise = noise.sample_arbitrary(*counts)
+            x_noise = noise.sample(*counts)
 
             # sample time
             t = torch.rand((x_data.shape[0],), dtype=x_data.dtype, device=x_data.device)
@@ -93,9 +92,6 @@ def train():
     unet = unet.eval()
 
     torch.save(unet.state_dict(), os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt"))
-
-    plt.plot(losses)
-    plt.show()
 
 
 if __name__ == "__main__":
