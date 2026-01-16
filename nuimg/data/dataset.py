@@ -161,3 +161,8 @@ class RoIFeatureDataLoader:
             torch.cat(features, dim=0).to(self.device),
             torch.cat(labels, dim=0).to(self.device),
         )
+
+
+if __name__ == "__main__":
+    dataset = RoIFeatureDataset(FEATURES_DATASET_DIR)
+    print(len(dataset))

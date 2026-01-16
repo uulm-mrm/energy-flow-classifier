@@ -120,4 +120,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # TODO: parametrize whether it is doing OOD or ID feature extraction
+    # TODO: based on that save at different places within FEATURES_DATASET_DIR
     main()

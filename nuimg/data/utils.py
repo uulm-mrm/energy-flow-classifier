@@ -67,10 +67,11 @@ def get_sample_data_gt(
         boxes.append(ann["bbox"])
         labels.append([token_to_cat[ann["category_token"]]])
 
-    if not boxes:
-        return None
-
-    return GroundTruth(
-        boxes=torch.tensor(boxes, dtype=torch.float32),
-        labels=torch.tensor(labels, dtype=torch.long),
+    return (
+        GroundTruth(
+            boxes=torch.tensor(boxes, dtype=torch.float32),
+            labels=torch.tensor(labels, dtype=torch.long),
+        )
+        if boxes
+        else None
     )
