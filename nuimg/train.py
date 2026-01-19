@@ -37,7 +37,7 @@ def train():
         n=c.CLASSES,
         shape=c.SHAPE,
         r=c.R,
-        var=c.VAR,
+        var_coef=c.VAR,
         device=c.DEVICE,  # type: ignore
     )
 
