@@ -59,9 +59,9 @@ def evaluate():
 
         _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
         sols = x_traj[-1]
-        scores = noise.get_scores(sols)
+        belief, uncertainty = noise.get_credability(sols)
 
-        preds = torch.argmax(scores, dim=1)
+        preds = torch.argmax(belief, dim=1)
         true_positives = sum(preds == y.reshape(-1))
         total_true_positives += true_positives
         total_points += y.shape[0]
