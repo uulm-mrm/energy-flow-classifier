@@ -63,8 +63,10 @@ def evaluate():
 
         preds = torch.argmax(belief, dim=1)
         true_positives = sum(preds == y.reshape(-1))
+
         total_true_positives += true_positives
         total_points += y.shape[0]
+
         accuracies.append((total_true_positives / total_points).cpu().item())  # type: ignore
 
         pbar.set_description(f"Running Accuracy: {accuracies[-1]:.4f}")
