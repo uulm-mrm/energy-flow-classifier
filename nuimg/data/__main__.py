@@ -18,10 +18,12 @@ from nuimg.data.roi_align import RoIAlignExtractor
 from nuimg.data.utils import category_mappings, get_sample_data_gt
 
 
+# make dir to save data
+os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
+
+# start up logger
 logging.basicConfig(
-    filename=os.path.join(
-        os.path.dirname(__file__), f"{c.NUIM_DATASET_VERSION}-data_export.log"
-    ),
+    filename=os.path.join(c.FEATURES_DATASET_DIR, "data_export.log"),
     filemode="w",
     format="%(asctime)s | %(levelname)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -30,9 +32,6 @@ logging.basicConfig(
 
 
 def main():
-    # make dir to save data
-    os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
-
     nuim = NuImages(
         c.NUIM_DATASET_VERSION, c.NUIM_DATASET_ROOT, verbose=True, lazy=True
     )
@@ -120,6 +119,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # TODO: parametrize whether it is doing OOD or ID feature extraction
-    # TODO: based on that save at different places within FEATURES_DATASET_DIR
     main()

@@ -15,11 +15,12 @@ COCO_OOD_CATEGORIES = []
 # dataset consts
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "..", "dataset")
 
-NUIM_DATASET_VERSION = "v1.0-train"
+NUIM_DATASET_VERSION = "v1.0-val"  # change between train and val for train and test
 NUIM_DATASET_ROOT = os.path.join(DATASET_DIR, "nuimages-v1.0")
 
+OOD = False
 FEATURES_DATASET_DIR = os.path.join(
-    DATASET_DIR, NUIM_DATASET_VERSION + "-frame_features"
+    DATASET_DIR, "v1.0-frame_features", "id" if not OOD else "ood", NUIM_DATASET_VERSION
 )
 
 # numerical consts

@@ -5,7 +5,6 @@ plots
 misc
 
 # nuimg stuff
-/nuimg/data/*-data_export.log
 /nuimg/data/consts.py
 /nuimg/dataset
 /nuimg/trained_models

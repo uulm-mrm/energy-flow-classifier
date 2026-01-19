@@ -4,7 +4,7 @@ import torch
 from nuimages import NuImages
 
 from nuimg.data.model import GroundTruth
-from nuimg.data.consts import NUIMG_ID_CATEGORIES, NUIMG_OOD_CATEGORIES
+from nuimg.data.consts import NUIMG_ID_CATEGORIES, NUIMG_OOD_CATEGORIES, OOD
 
 
 def category_mappings(nuim: NuImages) -> tuple[dict[str, int], dict[int, str]]:
@@ -17,13 +17,10 @@ def category_mappings(nuim: NuImages) -> tuple[dict[str, int], dict[int, str]]:
         tuple[dict[str, int], dict[int, str]]: token -> int, int -> name
     """
 
+    label_set = NUIMG_ID_CATEGORIES if not OOD else NUIMG_OOD_CATEGORIES
+
     categories = nuim.category
-    categories = list(
-        filter(
-            lambda d: d["name"] in NUIMG_ID_CATEGORIES + NUIMG_OOD_CATEGORIES,
-            categories,
-        )
-    )
+    categories = list(filter(lambda d: d["name"] in label_set, categories))
 
     token_to_cat = {}
     cat_to_name = {}
