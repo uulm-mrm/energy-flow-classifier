@@ -35,9 +35,7 @@ def main():
     nuim = NuImages(
         c.NUIM_DATASET_VERSION, c.NUIM_DATASET_ROOT, verbose=True, lazy=True
     )
-    extractor = RoIAlignExtractor(
-        labels=list(c.COCO_ID_CATEGORIES.values()), device=torch.device("cuda")
-    )
+    extractor = RoIAlignExtractor(device=torch.device("cuda"))
 
     # make and save label mappings
     nuim_tokens_to_category, category_to_name = category_mappings(nuim)

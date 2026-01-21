@@ -37,29 +37,6 @@ class RoIFeatureDataset:
         # because keys should be ints, not strings
         self.cat_dict = {int(k): v for k, v in cat_dict.items()}
 
-    def sort_per_category(self, x: Tensor, y: Tensor) -> tuple[Tensor, Tensor]:
-        """Sorts the x data tensor into per category in ascending order
-
-        Args:
-            x (Tensor): input data tensor
-            y (Tensor): categorical tensor
-
-        Returns:
-            tuple[Tensor, Tensor]: X, y sorted in ascending order based on y.
-                Needed for assumptions later in flow matching
-        """
-
-        indices = torch.argsort(y, stable=True)
-
-        return x[indices], y[indices]
-
-    def counts_per_category(self, y: Tensor) -> list[int]:
-        """
-        Counts how many elements in y there are based on categories from
-        cat_to_name.json
-        """
-        return [torch.sum(y == c).item() for c in self.cat_dict]  # type: ignore
-
     def __len__(self) -> int:
         return self.offsets[-1]
 
@@ -103,9 +80,23 @@ class RoIFeatureDataLoader:
 
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""
+
         frame: dict[str, Tensor] = torch.load(os.path.join(FEATURES_DATASET_DIR, fname))
 
-        return frame["features"][idxs], frame["labels"][idxs]
+        x = frame["features"][idxs]
+        y = frame["labels"][idxs].squeeze(1)
+
+        # make dirac deltas here as labels
+        ohe_y = torch.nn.functional.one_hot(  # pylint: disable=E1102
+            y, num_classes=len(self.dataset.cat_dict)
+        )
+
+        deltas = torch.zeros(
+            size=(y.shape[0], x.numel() // x.shape[0]), dtype=torch.float32
+        )
+        deltas[:, : ohe_y.shape[1]] = ohe_y.float()
+
+        return x, deltas.reshape(*x.shape)
 
     def __iter__(self):
         # __iter__ is what's done at startup of iteration

@@ -12,7 +12,6 @@ from nuimg.data.model import RoIs
 class RoIAlignExtractor(nn.Module):
     def __init__(
         self,
-        labels: list[int],
         score_thresh=0.5,
         device: Optional[torch.device] = None,
         box_size=7,
@@ -43,8 +42,6 @@ class RoIAlignExtractor(nn.Module):
         self.to(self.device)
 
         self.preproc = weights.transforms()
-
-        self.labels = torch.tensor(labels).to(self.device)
 
     @torch.no_grad()
     def forward(self, img: Tensor) -> Optional[RoIs]:
@@ -86,10 +83,7 @@ class RoIAlignExtractor(nn.Module):
         labels = det["labels"]
 
         # filter by score threshold
-        keep_labels = torch.isin(labels, self.labels, assume_unique=False, invert=False)
-        keep_scores = scores >= self.score_thresh
-        keep = keep_labels & keep_scores
-
+        keep = scores >= self.score_thresh
         boxes = boxes[keep]
         scores = scores[keep]
         labels = labels[keep]
