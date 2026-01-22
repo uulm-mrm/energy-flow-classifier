@@ -1,4 +1,5 @@
 import os
+import math
 
 from tqdm import tqdm
 
@@ -6,11 +7,11 @@ import matplotlib.pyplot as plt
 
 import torch
 
-from flow_matching.flow_matching.distributions import MultiIndependentNormal
 from flow_matching.flow_matching import ODEProcess, RungeKuttaIntegrator
 from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
 
 from nuimg.data import RoIFeatureDataset, RoIFeatureDataLoader, FEATURES_DATASET_DIR
+import nuimg.eval_utils as u
 import nuimg.consts as c
 
 from models.unet import UNet
@@ -26,17 +27,15 @@ def evaluate():
         batch_size=c.BATCH_SIZE,
         shuffle=c.SHUFFLE,
         skip_last=c.SKIP_LAST,
+        train=False,
         device=c.DEVICE,
     )
 
-    # noise setup
-    noise = MultiIndependentNormal(
-        n=c.CLASSES,
-        shape=c.SHAPE,
-        r=c.R,
-        var_coef=c.VAR,
-        device=c.DEVICE,  # type: ignore
+    # dirac deltas setup
+    deltas = torch.zeros(
+        size=(c.CLASSES, math.prod(c.SHAPE)), dtype=torch.float32, device=c.DEVICE
     )
+    deltas[:, : c.CLASSES] = torch.eye(c.CLASSES, dtype=torch.float32, device=c.DEVICE)
 
     # load model
     unet = UNet(
@@ -59,10 +58,17 @@ def evaluate():
 
         _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
         sols = x_traj[-1]
-        belief, uncertainty = noise.get_credability(sols)
+
+        # calculate evidence metrics
+        measure = u.cosine_similarity(sols, deltas)
+        quality = u.norm_decay(sols)
+
+        measure = (measure + 1) * 0.5  # normalize to (0, 1]
+
+        belief, _ = u.credal_measures(measure, quality, W=3.0)
 
         preds = torch.argmax(belief, dim=1)
-        true_positives = sum(preds == y.reshape(-1))
+        true_positives = sum(preds == y.squeeze(1))
 
         total_true_positives += true_positives
         total_points += y.shape[0]

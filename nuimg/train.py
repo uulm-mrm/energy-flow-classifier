@@ -5,7 +5,6 @@ from tqdm import tqdm
 import torch
 
 from flow_matching.flow_matching import AffinePath
-from flow_matching.flow_matching.distributions import MultiIndependentNormal
 from flow_matching.flow_matching.scheduler import CosineScheduler
 from flow_matching.modules.utils import EMA
 
@@ -32,15 +31,6 @@ def train():
         device=c.DEVICE,
     )
 
-    # noise setup
-    noise = MultiIndependentNormal(
-        n=c.CLASSES,
-        shape=c.SHAPE,
-        r=c.R,
-        var_coef=c.VAR,
-        device=c.DEVICE,  # type: ignore
-    )
-
     # flow matching setup
     unet = UNet(
         in_c=c.SHAPE[0], out_c=c.SHAPE[0], features=c.FEATURES, t_dims=c.T_DIMS
@@ -56,21 +46,13 @@ def train():
     for _ in (pbar := tqdm(range(c.EPOCHS))):
         epoch_loss = 0.0
 
-        for x, y in dataloader:  # x: [B, *shape], y: [B, 1]
+        for x, y in dataloader:  # x: [B, *shape], y: [B, *shape]
             optim.zero_grad()
 
-            # sort data per category
-            x_data, y = dataset.sort_per_category(x, y.reshape(-1))
-
-            # sample noise
-            counts = dataset.counts_per_category(y)
-            x_noise = noise.sample(*counts)
-
-            # sample time
-            t = torch.rand((x_data.shape[0],), dtype=x_data.dtype, device=x_data.device)
+            t = torch.rand((x.shape[0],), dtype=x.dtype, device=x.device)
 
             # sample and predict path
-            path_sample = path.sample(x_noise, x_data, t=t)
+            path_sample = path.sample(y, x, t=t)
             dxt_hat = unet.forward(path_sample.xt, t.unsqueeze(1))  # time to vector
 
             # calculate loss
@@ -86,7 +68,7 @@ def train():
         # add avg epoch loss
         _loss = epoch_loss / dataloader.num_batches
         losses.append(_loss)
-        pbar.set_description(f"Loss: {_loss:.3f}")
+        pbar.set_description(f"Loss: {_loss:.4f}")
 
     ema.to_model()
     unet = unet.eval()

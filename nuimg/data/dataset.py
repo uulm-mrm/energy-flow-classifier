@@ -64,6 +64,7 @@ class RoIFeatureDataLoader:
         batch_size: int,
         shuffle: bool,
         skip_last: bool,
+        train: bool = True,
         device: torch.device | None = None,
     ) -> None:
 
@@ -74,6 +75,8 @@ class RoIFeatureDataLoader:
         self.shuffle = shuffle
         self.skip_last = skip_last
 
+        self.train = train
+
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
@@ -83,20 +86,10 @@ class RoIFeatureDataLoader:
 
         frame: dict[str, Tensor] = torch.load(os.path.join(FEATURES_DATASET_DIR, fname))
 
-        x = frame["features"][idxs]
-        y = frame["labels"][idxs].squeeze(1)
+        if not self.train:  # in eval just return data and labels
+            return frame["features"][idxs], frame["labels"][idxs]
 
-        # make dirac deltas here as labels
-        ohe_y = torch.nn.functional.one_hot(  # pylint: disable=E1102
-            y, num_classes=len(self.dataset.cat_dict)
-        )
-
-        deltas = torch.zeros(
-            size=(y.shape[0], x.numel() // x.shape[0]), dtype=torch.float32
-        )
-        deltas[:, : ohe_y.shape[1]] = ohe_y.float()
-
-        return x, deltas.reshape(*x.shape)
+        return frame["features"][idxs], frame["deltas"][idxs]
 
     def __iter__(self):
         # __iter__ is what's done at startup of iteration

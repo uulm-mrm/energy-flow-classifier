@@ -21,3 +21,4 @@ class RoIs:
 class LabeledFrame:
     features: Tensor  # [n, 256, 7, 7]
     labels: Tensor  # [n, 1]
+    deltas: Tensor  # [n, 256, 7, 7]

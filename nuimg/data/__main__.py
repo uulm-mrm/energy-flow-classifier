@@ -94,7 +94,20 @@ def main():
         labels = gt.labels[max_idx][iou_thresh]  # [gt,] -> [roi,] -> [best fit]
         features = rois.features[iou_thresh]  # [roi,] -> [best fit]
 
-        frame = m.LabeledFrame(features=features, labels=labels)
+        # make dirac deltas
+        ohe_labels = torch.nn.functional.one_hot(  # pylint: disable=E1102
+            labels.reshape(-1), num_classes=len(c.NUIMG_ID_CATEGORIES)
+        )
+
+        deltas = torch.zeros(
+            size=(labels.shape[0], features.numel() // features.shape[0]),
+            dtype=torch.float32,
+        )
+        deltas[:, : ohe_labels.shape[1]] = ohe_labels.float()
+
+        frame = m.LabeledFrame(
+            features=features, labels=labels, deltas=deltas.reshape(*features.shape)
+        )
 
         # save labeled frame under filename
         # loaded as a dict {"features": Tensor, "labels": Tensor}
