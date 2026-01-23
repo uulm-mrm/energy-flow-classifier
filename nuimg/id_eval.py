@@ -56,12 +56,12 @@ def evaluate():
             [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
         ).expand(x.shape[0], 2)
 
-        _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
+        _, x_traj = proc.sample(torch.rand_like(x), intervals, steps=c.ODE_STEPS)
         sols = x_traj[-1]
 
         # calculate evidence metrics
-        measure = u.cosine_similarity(sols, deltas)
-        quality = u.norm_decay(sols)
+        measure = u.cosine_similarity(sols, deltas, c.CLASSES)
+        quality = u.norm_decay(sols, c.CLASSES)
 
         measure = (measure + 1) * 0.5  # normalize to (0, 1]
 
