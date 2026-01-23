@@ -15,8 +15,6 @@ SKIP_LAST = True
 # noise setup
 CLASSES = len(NUIMG_ID_CATEGORIES)
 SHAPE = (256, 7, 7)
-R = 3.0
-VAR = 1.0
 
 # model setup
 IN_C = SHAPE[0]

@@ -3,14 +3,19 @@ import os
 
 # nuimg categories
 # more classes at https://www.nuscenes.org/nuimages#data-annotation
-NUIMG_ID_CATEGORIES = ["human.pedestrian.adult", "vehicle.bicycle", "vehicle.car"]
-NUIMG_OOD_CATEGORIES = []
-
-# COCO labels for FasterRCNN
-# https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
-# pedestrian is actually person in COCO
-COCO_ID_CATEGORIES = {"pedestrian": 1, "bicycle": 2, "car": 3}
-COCO_OOD_CATEGORIES = []
+NUIMG_ID_CATEGORIES = [
+    "human.pedestrian.adult",
+    "vehicle.bicycle",
+    "vehicle.car",
+]
+COCO_OOD_CATEGORIES = {
+    "person": 1,
+    "bicycle": 2,
+    "car": 3,
+    "motorcycle": 4,
+    "bus": 6,
+    "truck": 8,
+}
 
 # dataset consts
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "..", "dataset")
@@ -18,9 +23,14 @@ DATASET_DIR = os.path.join(os.path.dirname(__file__), "..", "dataset")
 NUIM_DATASET_VERSION = "v1.0-val"  # change between train and val for train and test
 NUIM_DATASET_ROOT = os.path.join(DATASET_DIR, "nuimages-v1.0")
 
-OOD = False
+COCO_DATASET_VERSION = "val2017"
+COCO_DATASET_ROOT = os.path.join(DATASET_DIR, "COCO", COCO_DATASET_VERSION)
+
+OOD = True
 FEATURES_DATASET_DIR = os.path.join(
-    DATASET_DIR, "v1.0-frame_features", "id" if not OOD else "ood", NUIM_DATASET_VERSION
+    DATASET_DIR,
+    "nuimg-frame_features" if not OOD else "coco-frame_features",
+    NUIM_DATASET_VERSION if not OOD else COCO_DATASET_VERSION,
 )
 
 # numerical consts
