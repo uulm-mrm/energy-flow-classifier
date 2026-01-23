@@ -3,8 +3,6 @@ import math
 
 from tqdm import tqdm
 
-import matplotlib.pyplot as plt
-
 import torch
 
 from flow_matching.flow_matching import ODEProcess, RungeKuttaIntegrator
@@ -47,16 +45,12 @@ def evaluate():
     # process setup
     proc = ODEProcess(unet, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
 
-    total_true_positives = 0
-    total_points = 0
-    accuracies = []
-
-    for x, y in (pbar := tqdm(dataloader)):
+    for x, y in tqdm(dataloader):
         intervals = torch.tensor(
             [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
         ).expand(x.shape[0], 2)
 
-        _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
+        _, x_traj = proc.sample(torch.rand_like(x), intervals, steps=c.ODE_STEPS)
         sols = x_traj[-1]
 
         # calculate evidence metrics
@@ -65,21 +59,13 @@ def evaluate():
 
         measure = (measure + 1) * 0.5  # normalize to (0, 1]
 
-        belief, _ = u.credal_measures(measure, quality, W=3.0)
+        belief, vacuity = u.credal_measures(measure, quality, W=3.0)
 
-        preds = torch.argmax(belief, dim=1)
-        true_positives = sum(preds == y.squeeze(1))
-
-        total_true_positives += true_positives
-        total_points += y.shape[0]
-
-        accuracies.append((total_true_positives / total_points).cpu().item())  # type: ignore
-
-        pbar.set_description(f"Running Accuracy: {accuracies[-1]:.4f}")
-
-    print(f"Total Accuracy: {(total_true_positives / total_points):.4f}")
-    plt.plot(accuracies)
-    plt.show()
+        # TODO: this is just WIP add OOD metrics here
+        print("COCO categories: ", y)
+        print("Belief: ", belief)
+        print("Vacuity: ", vacuity)
+        break
 
 
 if __name__ == "__main__":
