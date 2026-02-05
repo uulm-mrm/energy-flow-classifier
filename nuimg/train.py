@@ -8,8 +8,9 @@ from flow_matching.flow_matching import AffinePath
 from flow_matching.flow_matching.scheduler import CosineScheduler
 from flow_matching.modules.utils import EMA
 
-from models.unet import UNet
+from models.cnn import TimeResCNN
 
+from nuimg.utils import get_data_loss, get_noise_loss
 import nuimg.consts as c
 from nuimg.data import (
     RoIFeatureDataset,
@@ -32,14 +33,15 @@ def train():
     )
 
     # flow matching setup
-    unet = UNet(
-        in_c=c.SHAPE[0], out_c=c.SHAPE[0], features=c.FEATURES, t_dims=c.T_DIMS
+    net = TimeResCNN(
+        in_c=c.IN_C, t_dims=c.T_DIMS, res_blocks=c.RES_BLOCKS, linear_layers=c.LINEAR
     ).to(c.DEVICE)
-    ema = EMA(unet, rate=0.999)
+
+    ema = EMA(net, rate=0.999)
     path = AffinePath(CosineScheduler())
 
     # torch setup
-    optim = torch.optim.AdamW(unet.parameters(), lr=c.LR)
+    optim = torch.optim.AdamW(net.parameters(), lr=c.LR)
     losses = []
 
     # training loop
@@ -49,14 +51,11 @@ def train():
         for x, y in dataloader:  # x: [B, *shape], y: [B, *shape]
             optim.zero_grad()
 
-            t = torch.rand((x.shape[0],), dtype=x.dtype, device=x.device)
+            # get loss components
+            loss_data = get_data_loss(x, y, net, path)
+            loss_noise = get_noise_loss(x, y, net, path)
 
-            # sample and predict path
-            path_sample = path.sample(y, x, t=t)
-            dxt_hat = unet.forward(path_sample.xt, t.unsqueeze(1))  # time to vector
-
-            # calculate loss
-            loss = (dxt_hat - path_sample.dxt).square().mean()
+            loss = loss_data + loss_noise
 
             # update params
             loss.backward()
@@ -71,9 +70,9 @@ def train():
         pbar.set_description(f"Loss: {_loss:.4f}")
 
     ema.to_model()
-    unet = unet.eval()
+    net = net.eval()
 
-    torch.save(unet.state_dict(), os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt"))
+    torch.save(net.state_dict(), os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt"))
 
 
 if __name__ == "__main__":
