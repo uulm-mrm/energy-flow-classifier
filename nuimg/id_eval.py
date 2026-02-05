@@ -65,7 +65,9 @@ def evaluate():
 
         measure = (measure + 1) * 0.5  # normalize to (0, 1]
 
-        belief, _ = u.credal_measures(measure, quality, W=3.0)
+        belief, vacuity = u.credal_measures(measure, quality, W=3.0)
+
+        print(belief, vacuity)
 
         preds = torch.argmax(belief, dim=1)
         true_positives = sum(preds == y.squeeze(1))
@@ -76,6 +78,7 @@ def evaluate():
         accuracies.append((total_true_positives / total_points).cpu().item())  # type: ignore
 
         pbar.set_description(f"Running Accuracy: {accuracies[-1]:.4f}")
+        break
 
     print(f"Total Accuracy: {(total_true_positives / total_points):.4f}")
     plt.plot(accuracies)

@@ -50,7 +50,7 @@ def evaluate():
             [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
         ).expand(x.shape[0], 2)
 
-        _, x_traj = proc.sample(torch.rand_like(x), intervals, steps=c.ODE_STEPS)
+        _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
         sols = x_traj[-1]
 
         # calculate evidence metrics
