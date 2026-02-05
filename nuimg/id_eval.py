@@ -11,7 +11,7 @@ from flow_matching.flow_matching import ODEProcess, RungeKuttaIntegrator
 from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
 
 from nuimg.data import RoIFeatureDataset, RoIFeatureDataLoader, FEATURES_DATASET_DIR
-import nuimg.eval_utils as u
+import nuimg.utils as u
 import nuimg.consts as c
 
 from models.unet import UNet

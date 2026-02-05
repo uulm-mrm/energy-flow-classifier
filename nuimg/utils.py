@@ -1,8 +1,11 @@
-# pylint: disable=C0103
+# pylint: disable=C0103, E1102
 
 import torch
 from torch import Tensor
 import torch.nn.functional as F
+
+from flow_matching.flow_matching import AffinePath
+from flow_matching.modules.utils import TimeDependentModule
 
 
 def gradient(y: Tensor, x: Tensor, create_graph: bool = False) -> Tensor:
@@ -27,6 +30,91 @@ def gradient(y: Tensor, x: Tensor, create_graph: bool = False) -> Tensor:
     )[0]
 
     return grad
+
+
+def get_data_loss(
+    x: Tensor, y: Tensor, net: TimeDependentModule, path: AffinePath
+) -> Tensor:
+    """The ordinary loss for learning the vector field
+
+    Args:
+        x (Tensor): _description_
+        y (Tensor): _description_
+        net (TimeDependentModule): _description_
+        path (AffinePath): _description_
+
+    Returns:
+        Tensor: _description_
+    """
+
+    # sample t
+    t = torch.rand((x.shape[0],), dtype=x.dtype, device=x.device)
+
+    # sample path for xt
+    path_sample = path.sample(x, y, t)
+    xt = path_sample.xt.detach().requires_grad_(True)
+
+    # get potential
+    potential = net.forward(xt, t.unsqueeze(1))
+
+    # get speed as the negative gradient of the potential
+    dxt_hat = -gradient(potential.sum(), xt, create_graph=True)
+
+    # get difference between speeds
+    return (dxt_hat - path_sample.dxt).square().mean()
+
+
+def get_noise_loss(
+    x: Tensor,
+    y: Tensor,
+    net: TimeDependentModule,
+    path: AffinePath,
+    blanket: tuple[float, float] = (-10.0, 10.0),
+) -> Tensor:
+    """
+    cos sim + grad norm
+
+    grad norm to push them outward slowly and not mega quickly
+    and also for it to be easily overridden by data loss
+
+
+    Args:
+        x (Tensor): _description_
+        y (Tensor): _description_
+        net (TimeDependentModule): _description_
+        path (AffinePath): _description_
+        blanket (tuple[float, float], optional): _description_. Defaults to (-10.0, 10.0).
+
+    Returns:
+        Tensor: _description_
+    """
+
+    # sample x noise from U[-a, b]
+    x_noise = torch.empty_like(x).uniform_(*blanket)
+
+    # sample time for it
+    t = torch.rand((x.shape[0],), dtype=x.dtype, device=x.device)
+
+    # sample noise path
+    noise_path_sample = path.sample(x_noise, y, t)
+    xt_noise = noise_path_sample.xt.detach().requires_grad_(True)
+
+    # get velocity of noise
+    potential = net.forward(xt_noise, t.unsqueeze(1))
+    dxt_noise = -gradient(potential.sum(), xt_noise, create_graph=True)
+
+    grad_norm = dxt_noise.norm(2, dim=-1)
+
+    # grad loss is E[(||Fi|| - 1)^2] try to minimize this
+    grad_loss = (grad_norm - 1.0).square().mean()
+
+    # try to also minimize cos sim for noise, so it flows "away" from target
+    # since cossim is [-1, 1] minimizing it means "flow away"
+    cos_sim = F.cosine_similarity(dxt_noise, noise_path_sample.dxt, dim=-1).mean()
+
+    # return the total loss of noise
+    grad_lambda = 0.1
+    return cos_sim + grad_lambda * grad_loss
 
 
 def cosine_similarity(sols: Tensor, deltas: Tensor, signal_dims: int) -> Tensor:
