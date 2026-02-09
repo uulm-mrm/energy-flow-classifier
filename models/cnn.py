@@ -107,11 +107,16 @@ class TimeCNN(TimeDependentModule):
         channels = [input_channels, 512, 1024]
 
         conv_layers = []
-        for i, (in_chan, out_chan) in enumerate(zip(channels[:-1], channels[1:])):
-            heads = out_chan // 32 if i == 0 else None
+        for in_chan, out_chan in zip(channels[:-1], channels[1:]):
+            heads = out_chan // 32
+
             conv_layers.append(
                 TimeResConv(
-                    in_chan, out_chan, time_dims, attn_heads=heads, use_pooling=True
+                    in_chan,
+                    out_chan,
+                    time_dims,
+                    attn_heads=heads,
+                    use_pooling=True,
                 )
             )
 
@@ -131,6 +136,10 @@ class TimeCNN(TimeDependentModule):
         # energy projection
         self.proj = nn.Linear(out_features, 1)  # type: ignore
 
+        # init proj with low weights, to not explode E
+        nn.init.normal_(self.proj.weight, std=0.01)
+        nn.init.zeros_(self.proj.bias)
+
     def forward(self, x: Tensor, t: Tensor) -> Tensor:
         # embed time
         t = t.reshape(-1, 1)  # vectorize just in case
@@ -138,14 +147,12 @@ class TimeCNN(TimeDependentModule):
 
         # conv bbone
         x = self.conv_backbone(x, time_emb)
-        print(x.shape)
 
         # flatten
         x = torch.flatten(x, 1)
 
         # linear part
         x = self.linear_backbone(x, time_emb)
-        print(x.shape)
 
         return self.proj(x)
 
