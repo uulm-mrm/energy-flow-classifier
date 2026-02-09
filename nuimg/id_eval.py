@@ -54,7 +54,7 @@ def evaluate():
 
     for x, y in (pbar := tqdm(dataloader)):
         intervals = torch.tensor(
-            [[1.0, 0.0]], dtype=torch.float32, device=c.DEVICE
+            [[0.0, 1.0]], dtype=torch.float32, device=c.DEVICE
         ).expand(x.shape[0], 2)
 
         _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)

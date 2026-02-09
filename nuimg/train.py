@@ -10,7 +10,7 @@ from flow_matching.modules import EMA
 
 from models.cnn import TimeCNN
 
-from nuimg.utils import get_data_loss, get_noise_loss
+from nuimg.utils import gradient
 import nuimg.consts as c
 from nuimg.data import (
     RoIFeatureDataset,
@@ -51,11 +51,15 @@ def train():
         for x, y in dataloader:  # x: [B, *shape], y: [B, *shape]
             optim.zero_grad()
 
-            # get loss components
-            loss_data = get_data_loss(x, y, net, path)
-            # loss_noise = get_noise_loss(x, y, net, path, blanket=(-2.0, 2.0))
+            t = torch.rand((x.shape[0], 1), dtype=x.dtype, device=x.device)
+            sample = path.sample(x, y, t)
+            xt = sample.xt.detach().requires_grad_(True)
 
-            loss = loss_data  # + loss_noise
+            potential = net.forward(xt, t.view(-1))
+
+            dxt_hat = -gradient(potential.sum(), xt, create_graph=True)
+
+            loss = (dxt_hat - sample.dxt).square().mean()
 
             # update params
             loss.backward()
