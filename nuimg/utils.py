@@ -5,7 +5,7 @@ from torch import Tensor
 import torch.nn.functional as F
 
 from flow_matching.flow_matching import AffinePath
-from flow_matching.modules.utils import TimeDependentModule
+from flow_matching.modules import TimeDependentModule
 
 
 def gradient(y: Tensor, x: Tensor, create_graph: bool = False) -> Tensor:

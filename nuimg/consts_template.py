@@ -19,8 +19,7 @@ SHAPE = (256, 7, 7)
 # model setup
 IN_C = SHAPE[0]
 T_DIMS = 128
-RES_BLOCKS = 2
-LINEAR = 3
+LINEAR = 2
 
 # training setup
 LR = 1e-3

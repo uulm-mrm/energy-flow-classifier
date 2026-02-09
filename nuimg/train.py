@@ -6,7 +6,7 @@ import torch
 
 from flow_matching.flow_matching import AffinePath
 from flow_matching.flow_matching.scheduler import CosineScheduler
-from flow_matching.modules.utils import EMA
+from flow_matching.modules import EMA
 
 from models.cnn import TimeCNN
 
@@ -33,9 +33,9 @@ def train():
     )
 
     # flow matching setup
-    net = TimeCNN(
-        in_c=c.IN_C, t_dims=c.T_DIMS, res_blocks=c.RES_BLOCKS, linear_layers=c.LINEAR
-    ).to(c.DEVICE)
+    net = TimeCNN(input_channels=c.IN_C, time_dims=c.T_DIMS, linears=c.LINEAR).to(
+        c.DEVICE
+    )
 
     ema = EMA(net, rate=0.999)
     path = AffinePath(CosineScheduler())

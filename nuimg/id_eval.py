@@ -11,7 +11,6 @@ from flow_matching.flow_matching import PotentialProcess, RungeKuttaIntegrator
 from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
 
 from nuimg.data import RoIFeatureDataset, RoIFeatureDataLoader, FEATURES_DATASET_DIR
-import nuimg.utils as u
 import nuimg.consts as c
 
 from models.cnn import TimeCNN
@@ -39,9 +38,10 @@ def evaluate():
     deltas[:, : c.CLASSES] = torch.eye(c.CLASSES, dtype=torch.float32, device=c.DEVICE)
 
     # load model
-    net = TimeCNN(
-        in_c=c.IN_C, t_dims=c.T_DIMS, res_blocks=c.RES_BLOCKS, linear_layers=c.LINEAR
-    ).to(c.DEVICE)
+    net = TimeCNN(input_channels=c.IN_C, time_dims=c.T_DIMS, linears=c.LINEAR).to(
+        c.DEVICE
+    )
+
     net.load_state_dict(torch.load(os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt")))
     net.eval()
 
