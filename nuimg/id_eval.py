@@ -7,18 +7,19 @@ import matplotlib.pyplot as plt
 
 import torch
 
-from flow_matching.flow_matching import ODEProcess, RungeKuttaIntegrator
+from flow_matching.flow_matching import PotentialProcess, RungeKuttaIntegrator
 from flow_matching.flow_matching.integrator_utils import RK4_TABLEAU
 
 from nuimg.data import RoIFeatureDataset, RoIFeatureDataLoader, FEATURES_DATASET_DIR
 import nuimg.utils as u
 import nuimg.consts as c
 
-from models.unet import UNet
+from models.cnn import TimeCNN
 
 
 def evaluate():
     torch.manual_seed(42)
+    torch.set_printoptions(precision=4, sci_mode=False)
 
     # dataset and dataloader
     dataset = RoIFeatureDataset(dataset_dir=FEATURES_DATASET_DIR)
@@ -38,14 +39,14 @@ def evaluate():
     deltas[:, : c.CLASSES] = torch.eye(c.CLASSES, dtype=torch.float32, device=c.DEVICE)
 
     # load model
-    unet = UNet(
-        in_c=c.SHAPE[0], out_c=c.SHAPE[0], features=c.FEATURES, t_dims=c.T_DIMS
+    net = TimeCNN(
+        in_c=c.IN_C, t_dims=c.T_DIMS, res_blocks=c.RES_BLOCKS, linear_layers=c.LINEAR
     ).to(c.DEVICE)
-    unet.load_state_dict(torch.load(os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt")))
-    unet.eval()
+    net.load_state_dict(torch.load(os.path.join(c.SAVE_DIR, c.SAVE_NAME + ".pt")))
+    net.eval()
 
     # process setup
-    proc = ODEProcess(unet, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
+    proc = PotentialProcess(net, RungeKuttaIntegrator(RK4_TABLEAU, device=c.DEVICE))  # type: ignore
 
     total_true_positives = 0
     total_points = 0
@@ -60,16 +61,11 @@ def evaluate():
         sols = x_traj[-1]
 
         # calculate evidence metrics
-        measure = u.cosine_similarity(sols, deltas, c.CLASSES)
-        quality = u.norm_decay(sols, c.CLASSES)
+        measure = torch.cdist(sols.flatten(1), deltas)
+        print("Labels: ", y)
+        print("Sols: ", sols.flatten(1)[:, :3])
 
-        measure = (measure + 1) * 0.5  # normalize to (0, 1]
-
-        belief, vacuity = u.credal_measures(measure, quality, W=3.0)
-
-        print(belief, vacuity)
-
-        preds = torch.argmax(belief, dim=1)
+        preds = torch.argmin(measure, dim=1)
         true_positives = sum(preds == y.squeeze(1))
 
         total_true_positives += true_positives
@@ -78,7 +74,6 @@ def evaluate():
         accuracies.append((total_true_positives / total_points).cpu().item())  # type: ignore
 
         pbar.set_description(f"Running Accuracy: {accuracies[-1]:.4f}")
-        break
 
     print(f"Total Accuracy: {(total_true_positives / total_points):.4f}")
     plt.plot(accuracies)

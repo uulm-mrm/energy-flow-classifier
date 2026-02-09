@@ -8,7 +8,7 @@ from flow_matching.flow_matching import AffinePath
 from flow_matching.flow_matching.scheduler import CosineScheduler
 from flow_matching.modules.utils import EMA
 
-from models.cnn import TimeResCNN
+from models.cnn import TimeCNN
 
 from nuimg.utils import get_data_loss, get_noise_loss
 import nuimg.consts as c
@@ -33,7 +33,7 @@ def train():
     )
 
     # flow matching setup
-    net = TimeResCNN(
+    net = TimeCNN(
         in_c=c.IN_C, t_dims=c.T_DIMS, res_blocks=c.RES_BLOCKS, linear_layers=c.LINEAR
     ).to(c.DEVICE)
 
@@ -53,9 +53,9 @@ def train():
 
             # get loss components
             loss_data = get_data_loss(x, y, net, path)
-            loss_noise = get_noise_loss(x, y, net, path)
+            # loss_noise = get_noise_loss(x, y, net, path, blanket=(-2.0, 2.0))
 
-            loss = loss_data + loss_noise
+            loss = loss_data  # + loss_noise
 
             # update params
             loss.backward()

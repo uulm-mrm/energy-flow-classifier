@@ -58,7 +58,7 @@ def get_data_loss(
     potential = net.forward(xt, t.unsqueeze(1))
 
     # get speed as the negative gradient of the potential
-    dxt_hat = -gradient(potential.sum(), xt, create_graph=True)
+    dxt_hat = gradient(potential.sum(), xt, create_graph=True)
 
     # get difference between speeds
     return (dxt_hat - path_sample.dxt).square().mean()
@@ -89,7 +89,7 @@ def get_noise_loss(
         Tensor: _description_
     """
 
-    # sample x noise from U[-a, b]
+    # sample x noise from U[a, b]
     x_noise = torch.empty_like(x).uniform_(*blanket)
 
     # sample time for it
