@@ -55,7 +55,7 @@ def get_data_loss(
     xt = path_sample.xt.detach().requires_grad_(True)
 
     # get potential
-    potential = net.forward(xt, t.unsqueeze(1))
+    potential = net.forward(xt, t.view(-1))
 
     # get speed as the negative gradient of the potential
     dxt_hat = -gradient(potential.sum(), xt, create_graph=True)

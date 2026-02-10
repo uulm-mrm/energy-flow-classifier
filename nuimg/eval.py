@@ -20,6 +20,9 @@ def evaluate():
     torch.manual_seed(42)
     torch.set_printoptions(precision=4, sci_mode=False)
 
+    # simplex dims
+    s_dims = c.CLASSES
+
     # dataset and dataloader
     dataset = RoIFeatureDataset(dataset_dir=FEATURES_DATASET_DIR)
     dataloader = RoIFeatureDataLoader(
@@ -58,12 +61,10 @@ def evaluate():
         ).expand(x.shape[0], 2)
 
         _, x_traj = proc.sample(x, intervals, steps=c.ODE_STEPS)
-        sols = x_traj[-1]
+        sols = x_traj[-1].flatten(1)  # (B, D...)
 
-        # calculate evidence metrics
-        measure = torch.cdist(sols.flatten(1), deltas)
-        print("Labels: ", y)
-        print("Sols: ", sols.flatten(1)[:, :3])
+        # calc pred measure
+        measure = torch.cdist(sols[:, :s_dims], deltas[:, :s_dims])
 
         preds = torch.argmin(measure, dim=1)
         true_positives = sum(preds == y.squeeze(1))

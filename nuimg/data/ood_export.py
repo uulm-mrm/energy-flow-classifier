@@ -29,13 +29,13 @@ def export():
 
     # set up extractor
     extractor = RoIAlignExtractor(device=torch.device("cuda"))
-    ood_mask = torch.tensor(list(c.COCO_OOD_CATEGORIES.keys()), device="cpu")
+    id_mask = torch.tensor(list(c.COCO_ID_CATEGORIES.keys()), device="cpu")
 
     # write categories to file
     with open(
         os.path.join(c.FEATURES_DATASET_DIR, "cat_to_name.json"), "w+", encoding="utf-8"
     ) as f:
-        f.write(json.dumps(c.COCO_OOD_CATEGORIES))
+        f.write(json.dumps(c.COCO_ID_CATEGORIES))
 
     # lookup table
     lut = {"fnames": [], "offsets": []}
@@ -62,7 +62,7 @@ def export():
             logging.info("No RoIs extracted in %s", img_fname)
             continue
 
-        label_mask = torch.isin(rois.labels, ood_mask)
+        label_mask = torch.isin(rois.labels, id_mask)
         label_mask = ~label_mask  # you want stuff that's not in the labels of coco
 
         if torch.all(~label_mask):
