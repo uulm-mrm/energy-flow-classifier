@@ -4,3 +4,7 @@ train_config:
 
   losses: [convergence, divergence, eikonal, prototype]
   lambdas: [1.0, 1.0, 0.1, 0.1]
+  losses_kwargs:
+    barrier: 1.0
+    blanket: [-3.0, 3.0]
+    sink: -5.0

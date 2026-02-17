@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 from dataclasses import dataclass, field
 
 from data import ExportConfig
@@ -27,3 +27,4 @@ class TrainConfig:
     # which losses to run with
     losses: list[Literal["convergence", "divergence", "eikonal", "prototype"]]
     lambdas: list[float]  # lambdas for losses in order
+    losses_kwargs: dict[str, Any]  # any kwargs for the any specific losses

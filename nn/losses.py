@@ -1,9 +1,11 @@
+from typing import Callable
 import torch
 from torch import Tensor
 
+from fm.flow_matching import AffinePath
 from fm.modules import TimeDependentModule
 
-__all__ = ["LOSS_DICT"]
+__all__ = ["LOSS_DICT", "apply_losses"]
 
 
 def __gradient(y: Tensor, x: Tensor, create_graph: bool = True) -> Tensor:
@@ -65,7 +67,7 @@ def convergence_loss(
 
 
 def divergence_loss(
-    xt: Tensor, t: Tensor, net: TimeDependentModule, margin: float = 1.0
+    xt: Tensor, t: Tensor, net: TimeDependentModule, barrier: float = 1.0
 ) -> Tensor:
     """Loss for OOD points. These should have high potential bariers to get into
     respective class prototypes, thus hindering stuff OOD to flow inwards
@@ -74,10 +76,10 @@ def divergence_loss(
         xt (Tensor): input sampled over probability path, shape (B, C, H, W)
         t (Tensor): time from when input is sampled, shape (B,)
         net (TimeDependentModule): network to predict point potential
-        margin (float, optional): potential barrier height which to aim for. Defaults to 1.0.
+        barrier (float, optional): potential barrier height which to aim for. Defaults to 1.0.
 
     Returns:
-        Tensor: _description_
+        Tensor: loss pushing the energy landscape to have barriers around in distribution data
     """
 
     # sample points off-path with much more noise
@@ -89,7 +91,7 @@ def divergence_loss(
     noise_potential = net.forward(xt_noise, t.view(-1, 1))
 
     # hinge loss for potential forcing it to be higher
-    return torch.relu(margin - (noise_potential - data_potential)).mean()
+    return torch.relu(barrier - (noise_potential - data_potential)).mean()
 
 
 def eikonal_loss(
@@ -127,17 +129,17 @@ def eikonal_loss(
 
 
 def prototype_loss(
-    prototypes: Tensor, net: TimeDependentModule, margin: float = -5.0
+    prototypes: Tensor, net: TimeDependentModule, sink: float = -5.0
 ) -> Tensor:
-    """Aims to keep energy of prototype points around the passed margin
+    """Aims to keep energy of prototype points around the passed sink
 
     Args:
         prototypes (Tensor): class prototypes from the dataset
         net (TimeDependentModule): network to predict point potential
-        margin (float, optional): potential which to aim for. Defaults to -5.0.
+        sink (float, optional): potential which to aim for. Defaults to -5.0.
 
     Returns:
-        Tensor: Hinge loss with margin as bound
+        Tensor: Hinge loss with sink as bound
     """
     t = torch.ones(
         (prototypes.shape[0], 1), dtype=prototypes.dtype, device=prototypes.device
@@ -145,7 +147,49 @@ def prototype_loss(
 
     prototype_potential = net.forward(prototypes, t)
 
-    return torch.relu(prototype_potential - margin).mean()
+    return torch.relu(prototype_potential - sink).mean()
+
+
+def apply_losses(
+    x: Tensor,
+    y: Tensor,
+    prototypes: Tensor,
+    path: AffinePath,
+    net: TimeDependentModule,
+    losses: dict[str, Callable[..., Tensor]],
+    lambdas: list[float],
+    **losses_kwargs
+) -> dict[str, Tensor]:
+    """Applies all losses specified in the list multiplied by their lambdas
+
+    Args:
+        x (Tensor): input at t=0, shape (B, C, H, W)
+        y (Tensor): class ptototypes at t=1, shape (B, C, H, W)
+        prototypes (Tensor): unique prototypes from dataset, shape (num class, C, H, W)
+        path (AffinePath): probability path which to sample
+        net (TimeDependentModule): network that computes potentials
+        losses (dict[str, Callable[..., Tensor]]): a list of losses to compute
+        labmdas (list[float]): scaling coefficients for those losses
+
+    Returns:
+        dict[str, Tensor]: loss for each loss in losses
+    """
+
+    t = torch.rand((x.shape[0],), dtype=x.dtype, device=x.device)
+    path_sample = path.sample(x, y, t)
+
+    retval = {}
+    for i, (loss, loss_fn) in enumerate(losses.items()):
+        retval[loss] = lambdas[i] * loss_fn(
+            xt=path_sample.xt,
+            dxt=path_sample.dxt,
+            t=t,
+            net=net,
+            prototypes=prototypes,
+            **losses_kwargs
+        )
+
+    return retval
 
 
 LOSS_DICT = {

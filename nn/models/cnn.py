@@ -4,8 +4,8 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 
-from flow_matching.modules import ConvMHSA
-from flow_matching.modules import (
+from fm.modules import ConvMHSA
+from fm.modules import (
     TimeDependentSequential,
     TimeDependentModule,
     SinusoidalTimeEmbedding,
