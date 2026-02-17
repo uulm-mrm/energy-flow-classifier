@@ -1,5 +1,5 @@
 import os
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import json
 import logging
 
@@ -17,6 +17,7 @@ import nuimg.data.model as m
 from nuimg.data.config import ExportConfig
 from nuimg.data.roi_align import RoIAlignExtractor
 from nuimg.data.utils import category_mappings, get_sample_data_gt
+from nuimg.data.make_prototypes import compute_prototypes
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -30,12 +31,9 @@ parser.add_argument(  # https://www.nuscenes.org/nuimages#data-annotation
 )
 
 
-def main():
+def export(cfg: ExportConfig, args: Namespace):
     # iou threshold
     iou_thresh = 0.75
-
-    args = parser.parse_args()
-    cfg = ExportConfig(dataset="nuimages-v1.0", version=args.version)
 
     # make dir to save data
     os.makedirs(cfg.output_dir, exist_ok=True)
@@ -120,6 +118,14 @@ def main():
         os.path.join(cfg.output_dir, "index_lookup_table.json"), "w+", encoding="utf-8"
     ) as f:
         f.write(json.dumps(lut))
+
+
+def main():
+    args = parser.parse_args()
+    cfg = ExportConfig(dataset="nuimages-v1.0", version=args.version)
+
+    export(cfg, args)
+    compute_prototypes(cfg)
 
 
 if __name__ == "__main__":

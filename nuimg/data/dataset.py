@@ -17,6 +17,7 @@ class RoIFeatureDataset:
         super().__init__()
 
         self.dataset_dir = export_cfg.output_dir
+        self.prototypes_pt = export_cfg.prototypes
 
         # get .pt files-index LuT
         with open(
@@ -72,6 +73,8 @@ class RoIFeatureDataLoader:
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
+
+        self.prototypes = torch.load(self.dataset.prototypes_pt)
 
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""
@@ -130,7 +133,7 @@ class RoIFeatureDataLoader:
             feats, labs = self.get_from_file(fname, idxs)
 
             features.append(feats)
-            labels.append(labs)  # labels.append(prototypes[labs])
+            labels.append(self.prototypes[labs])
 
         # return and push to device
         return (
@@ -152,4 +155,4 @@ if __name__ == "__main__":
     dl = RoIFeatureDataLoader(ds, batch_size=50, shuffle=True, skip_last=False)
 
     for x, y in dl:
-        print(x.shape, y)
+        print(x.shape, y.shape)

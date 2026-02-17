@@ -32,11 +32,7 @@ parser.add_argument(
 )
 
 
-def export():
-    args = parser.parse_args()
-    cfg = ExportConfig(dataset="COCO", version=args.version)
-    cfg.set_labels(dict(args.labels))
-
+def export(cfg: ExportConfig):
     # make dirs
     os.makedirs(cfg.output_dir, exist_ok=True)
 
@@ -109,5 +105,13 @@ def export():
         f.write(json.dumps(lut))
 
 
+def main():
+    args = parser.parse_args()
+    cfg = ExportConfig(dataset="COCO", version=args.version)
+    cfg.set_labels(dict(args.labels))
+
+    export(cfg)
+
+
 if __name__ == "__main__":
-    export()
+    main()
