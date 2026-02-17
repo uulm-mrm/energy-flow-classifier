@@ -13,12 +13,11 @@ class GroundTruth:
 class RoIs:
     features: Tensor  # [n, 256, 7, 7]
     boxes: Tensor  # [n, 4]; xmin, ymin, xmax, ymax
-    scores: Tensor  # [n, 1]
-    labels: Tensor  # [n, 1]
+    scores: Tensor  # [n,]
+    labels: Tensor  # [n,]
 
 
 @dataclass
 class LabeledFrame:
     features: Tensor  # [n, 256, 7, 7]
-    labels: Tensor  # [n, 1]
-    deltas: Tensor  # [n, 256, 7, 7]
+    labels: Tensor  # [n,]

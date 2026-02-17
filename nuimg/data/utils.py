@@ -1,15 +1,15 @@
 from typing import Optional
 
 import torch
-from torch import Tensor
 
 from nuimages import NuImages
 
 from nuimg.data.model import GroundTruth
-from nuimg.data.consts import NUIMG_ID_CATEGORIES
 
 
-def category_mappings(nuim: NuImages) -> tuple[dict[str, int], dict[int, str]]:
+def category_mappings(
+    nuim: NuImages, label_set: set[str]
+) -> tuple[dict[str, int], dict[int, str]]:
     """Maps token categories to integers and maps integers to names
 
     Args:
@@ -18,8 +18,6 @@ def category_mappings(nuim: NuImages) -> tuple[dict[str, int], dict[int, str]]:
     Returns:
         tuple[dict[str, int], dict[int, str]]: token -> int, int -> name
     """
-
-    label_set = NUIMG_ID_CATEGORIES
 
     categories = nuim.category
     categories = list(filter(lambda d: d["name"] in label_set, categories))
@@ -74,16 +72,3 @@ def get_sample_data_gt(
         if boxes
         else None
     )
-
-
-def make_dirac_deltas(cats: Tensor, dims: int) -> Tensor:
-    # make dirac deltas
-    ohe_labels = torch.nn.functional.one_hot(  # pylint: disable=E1102
-        cats.reshape(-1), num_classes=len(NUIMG_ID_CATEGORIES)
-    )
-
-    deltas = torch.zeros(size=(cats.shape[0], dims), dtype=torch.float32)
-
-    deltas[:, : ohe_labels.shape[1]] = ohe_labels.float()
-
-    return deltas

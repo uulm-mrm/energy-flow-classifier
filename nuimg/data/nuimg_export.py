@@ -1,4 +1,5 @@
 import os
+from argparse import ArgumentParser
 import json
 import logging
 
@@ -11,45 +12,53 @@ from torchvision.ops import box_iou
 
 from nuimages import NuImages
 
-import nuimg.data.consts as c
 import nuimg.data.model as m
 
+from nuimg.data.config import ExportConfig
 from nuimg.data.roi_align import RoIAlignExtractor
-from nuimg.data.utils import category_mappings, get_sample_data_gt, make_dirac_deltas
+from nuimg.data.utils import category_mappings, get_sample_data_gt
+
+parser = ArgumentParser()
+parser.add_argument(
+    "--version",
+    type=str,
+    default="v1.0-mini",
+    choices=["v1.0-mini", "v1.0-train", "v1.0-val"],
+)
+parser.add_argument(  # https://www.nuscenes.org/nuimages#data-annotation
+    "--labels", type=str, nargs="+", default=["human.pedestrian.adult", "vehicle.car"]
+)
 
 
-def export():
+def main():
+    # iou threshold
+    iou_thresh = 0.75
+
+    args = parser.parse_args()
+    cfg = ExportConfig(dataset="nuimages-v1.0", version=args.version)
+
     # make dir to save data
-    os.makedirs(c.FEATURES_DATASET_DIR, exist_ok=True)
+    os.makedirs(cfg.output_dir, exist_ok=True)
 
     # start up logger
     logging.basicConfig(
-        filename=os.path.join(c.FEATURES_DATASET_DIR, "data_export.log"),
+        filename=os.path.join(cfg.output_dir, "data_export.log"),
         filemode="w",
         format="%(asctime)s | %(levelname)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.INFO,
     )
 
-    nuim = NuImages(
-        c.NUIM_DATASET_VERSION, c.NUIM_DATASET_ROOT, verbose=True, lazy=True
-    )
+    nuim = NuImages(cfg.version, cfg.input_dir, verbose=True, lazy=True)
     extractor = RoIAlignExtractor(device=torch.device("cuda"))
 
     # make and save label mappings
-    nuim_tokens_to_category, category_to_name = category_mappings(nuim)
+    nuim_tokens_to_category, category_to_name = category_mappings(nuim, args.labels)
+    cfg.set_labels(category_to_name)
 
-    with open(
-        os.path.join(c.FEATURES_DATASET_DIR, "token_to_cat.json"),
-        "w+",
-        encoding="utf-8",
-    ) as f:
-        f.write(json.dumps(nuim_tokens_to_category))
-
-    with open(
-        os.path.join(c.FEATURES_DATASET_DIR, "cat_to_name.json"), "w+", encoding="utf-8"
-    ) as f:
-        f.write(json.dumps(category_to_name))
+    # save config
+    with open(os.path.join(cfg.output_dir, "config.json"), "w+", encoding="utf-8") as f:
+        f.write(json.dumps(cfg.__dict__, indent=4))
 
     # lookup table for quicker indexing later on
     lut = {"fnames": [], "offsets": []}
@@ -70,7 +79,7 @@ def export():
             continue
 
         # extract features using FRCNN from image
-        img = decode_image(os.path.join(c.NUIM_DATASET_ROOT, sample_data["filename"]))
+        img = decode_image(os.path.join(cfg.input_dir, sample_data["filename"]))
         rois = extractor.forward(img)
 
         if not rois:
@@ -83,27 +92,23 @@ def export():
 
         # get max ious for filtering
         max_ious, max_idx = ious.max(dim=1)
-        iou_thresh = max_ious >= c.IOU_THRESH
+        iou_mask = max_ious >= iou_thresh
 
-        if torch.all(~iou_thresh):
+        if torch.all(~iou_mask):
             logging.info("No overlap between boxes in %s", sample_data["filename"])
             continue
 
         # filter features and labels
-        labels = gt.labels[max_idx][iou_thresh]  # [gt,] -> [roi,] -> [best fit]
-        features = rois.features[iou_thresh]  # [roi,] -> [best fit]
+        labels = gt.labels[max_idx][iou_mask]  # [gt,] -> [roi,] -> [best fit]
+        features = rois.features[iou_mask]  # [roi,] -> [best fit]
 
-        deltas = make_dirac_deltas(labels, features.numel() // features.shape[0])
-
-        frame = m.LabeledFrame(
-            features=features, labels=labels, deltas=deltas.reshape(*features.shape)
-        )
+        frame = m.LabeledFrame(features=features, labels=labels.view(-1))
 
         # save labeled frame under filename
         # loaded as a dict {"features": Tensor, "labels": Tensor}
         fname = sample_data["filename"].split("/")[-1][:-3] + "pt"
 
-        torch.save(frame.__dict__, os.path.join(c.FEATURES_DATASET_DIR, fname))
+        torch.save(frame.__dict__, os.path.join(cfg.output_dir, fname))
 
         # update LuT
         offset += frame.labels.shape[0]
@@ -112,12 +117,10 @@ def export():
 
     # write lookup table
     with open(
-        os.path.join(c.FEATURES_DATASET_DIR, "index_lookup_table.json"),
-        "w+",
-        encoding="utf-8",
+        os.path.join(cfg.output_dir, "index_lookup_table.json"), "w+", encoding="utf-8"
     ) as f:
         f.write(json.dumps(lut))
 
 
 if __name__ == "__main__":
-    export()
+    main()

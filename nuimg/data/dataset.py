@@ -9,33 +9,28 @@ from math import ceil
 import torch
 from torch import Tensor
 
-from nuimg.data.consts import FEATURES_DATASET_DIR
+from nuimg.data.config import ExportConfig
 
 
 class RoIFeatureDataset:
-    def __init__(self, dataset_dir: str, samples: int | None = None) -> None:
+    def __init__(self, export_cfg: ExportConfig) -> None:
         super().__init__()
 
-        self.dataset_dir = dataset_dir
+        self.dataset_dir = export_cfg.output_dir
 
         # get .pt files-index LuT
         with open(
-            os.path.join(dataset_dir, "index_lookup_table.json"), "r+", encoding="utf-8"
+            os.path.join(self.dataset_dir, "index_lookup_table.json"),
+            "r+",
+            encoding="utf-8",
         ) as f:
             lut = json.loads(f.read())
 
-        # [:None] is just like [:] so this is okay when sampling
-        self.fnames = lut["fnames"][:samples]
-        self.offsets = lut["offsets"][:samples]
-
-        # get the classes metadata json
-        with open(
-            os.path.join(dataset_dir, "cat_to_name.json"), "r+", encoding="utf-8"
-        ) as f:
-            cat_dict = json.loads(f.read())
+        self.fnames = lut["fnames"]
+        self.offsets = lut["offsets"]
 
         # because keys should be ints, not strings
-        self.cat_dict = {int(k): v for k, v in cat_dict.items()}
+        self.cat_dict = export_cfg.label_mapping
 
     def __len__(self) -> int:
         return self.offsets[-1]
@@ -64,7 +59,6 @@ class RoIFeatureDataLoader:
         batch_size: int,
         shuffle: bool,
         skip_last: bool,
-        train: bool = True,
         device: torch.device | None = None,
     ) -> None:
 
@@ -75,8 +69,6 @@ class RoIFeatureDataLoader:
         self.shuffle = shuffle
         self.skip_last = skip_last
 
-        self.train = train
-
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
@@ -84,12 +76,11 @@ class RoIFeatureDataLoader:
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""
 
-        frame: dict[str, Tensor] = torch.load(os.path.join(FEATURES_DATASET_DIR, fname))
+        frame: dict[str, Tensor] = torch.load(
+            os.path.join(self.dataset.dataset_dir, fname)
+        )
 
-        if not self.train:  # in eval just return data and labels
-            return frame["features"][idxs], frame["labels"][idxs]
-
-        return frame["features"][idxs], frame["deltas"][idxs]
+        return frame["features"][idxs], frame["labels"][idxs]
 
     def __iter__(self):
         # __iter__ is what's done at startup of iteration
@@ -139,10 +130,26 @@ class RoIFeatureDataLoader:
             feats, labs = self.get_from_file(fname, idxs)
 
             features.append(feats)
-            labels.append(labs)
+            labels.append(labs)  # labels.append(prototypes[labs])
 
         # return and push to device
         return (
             torch.cat(features, dim=0).to(self.device),
             torch.cat(labels, dim=0).to(self.device),
         )
+
+
+if __name__ == "__main__":
+    with open(
+        r"nuimg/dataset/nuimages-v1.0_frames/v1.0-mini/config.json",
+        "r+",
+        encoding="utf-8",
+    ) as _f:
+        cfg = json.loads(_f.read())
+        cfg = ExportConfig.from_dict(cfg)
+
+    ds = RoIFeatureDataset(cfg)
+    dl = RoIFeatureDataLoader(ds, batch_size=50, shuffle=True, skip_last=False)
+
+    for x, y in dl:
+        print(x.shape, y)
