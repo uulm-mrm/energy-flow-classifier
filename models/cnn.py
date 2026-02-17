@@ -146,7 +146,7 @@ class TimeCNN(TimeDependentModule):
 def main():
     import yaml
 
-    with open(r"nuimg/model.cfg.yaml", "r+", encoding="utf-8") as f:
+    with open(r"models/configs/cnn.cfg.yaml", "r+", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)["model"]
 
     x = torch.rand((10, 256, 7, 7))

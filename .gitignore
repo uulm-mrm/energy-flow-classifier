@@ -5,7 +5,7 @@ plots
 misc
 
 # nuimg stuff
-/nuimg/dataset
+dataset
 /nuimg/trained_models
 
 ### Python ###
