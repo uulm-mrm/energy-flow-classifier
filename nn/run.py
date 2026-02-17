@@ -1,3 +1,89 @@
+import os
+import shutil
+import logging
+from datetime import datetime, timezone
+
+import yaml
+
+import matplotlib.pyplot as plt
+
+from torch import Tensor
+
+from nn.configs.config import DataConfig, TrainConfig
+
+
+def __load_yaml(path: str) -> dict:
+    with open(path, "r+", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    return data
+
+
+def __copy_yaml(src: str, dest_dir: str) -> None:
+    dest = os.path.join(dest_dir, src.split("/")[-1])
+    shutil.copy(src, dest)
+
+
 class Run:
-    def __init__(self) -> None:
-        pass
+    def __init__(
+        self,
+        model_cfg_path: str,
+        data_cfg_path: str,
+        train_cfg_path: str,
+        name: str = datetime.now(timezone.utc).isoformat(),
+    ) -> None:
+        # set name
+        self.name = name
+
+        # load configs
+        self.model_config: dict = __load_yaml(model_cfg_path)
+        self.data_cfg = DataConfig(**__load_yaml(data_cfg_path))
+        self.train_cfg = TrainConfig(**__load_yaml(train_cfg_path))
+
+        # set run dirs
+        self.run_dir = os.path.join("runs", name)
+        self.plot_dir = os.path.join(self.run_dir, "plots")
+        self.cfg_dir = os.path.join(self.run_dir, "configs")
+
+        # make dirs for run
+        os.makedirs(self.run_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
+        os.makedirs(self.cfg_dir, exist_ok=True)
+
+        # copy configs to run
+        __copy_yaml(model_cfg_path, self.cfg_dir)
+        __copy_yaml(data_cfg_path, self.cfg_dir)
+        __copy_yaml(train_cfg_path, self.cfg_dir)
+
+        # set up loss tracking batch/epoch
+        self.batch_losses = {loss_name: 0.0 for loss_name in self.train_cfg.losses}
+        self.batch_losses["total"] = 0.0
+
+        self.epoch_losses = {loss_name: [] for loss_name in self.train_cfg.losses}
+        self.epoch_losses["total"] = []
+
+        # make logger
+        logging.basicConfig(
+            filename=os.path.join(self.run_dir, "run_log.log"),
+            filemode="w",
+            format="%(asctime)s | %(levelname)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            level=logging.INFO,
+        )
+
+    def update_batch_loss(self, loss_dict: dict[str, Tensor]) -> None:
+        for loss, loss_val in loss_dict.items():
+            self.batch_losses[loss] += loss_val.item()
+
+    def update_epoch_loss(self, num_batches: int) -> None:
+        for loss, loss_val in self.batch_losses.items():
+            self.epoch_losses[loss].append(loss_val / num_batches)
+
+    def plot_losses(self) -> None:
+        for loss, loss_vals in self.epoch_losses:
+            plt.plot(loss_vals, label=loss)
+
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(os.path.join(self.plot_dir, "losses.pdf"), format="pdf")
