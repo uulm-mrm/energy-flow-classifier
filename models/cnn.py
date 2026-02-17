@@ -33,7 +33,6 @@ class TimeDependentLinear(TimeDependentModule):
         return F.silu(x)
 
 
-# if you need two just add another conv block
 class TimeResConv(TimeDependentModule):
     def __init__(
         self,
@@ -85,17 +84,10 @@ class TimeResConv(TimeDependentModule):
         return self.pool(out)
 
 
-class TimeCNN(TimeDependentModule):
-    def __init__(
-        self,
-        input_channels: int,
-        time_dims: int,
-        linears: int = 2,
-        base_channels: int = 64,  # sinus emb dims
-    ) -> None:
+class TimeMLP(nn.Module):
+    def __init__(self, base_channels: int, time_dims: int) -> None:
         super().__init__()
 
-        # time embedding, mlp for global time
         self.time_mlp = nn.Sequential(
             SinusoidalTimeEmbedding(base_channels),
             nn.Linear(base_channels, time_dims),
@@ -103,38 +95,32 @@ class TimeCNN(TimeDependentModule):
             nn.Linear(time_dims, time_dims),
         )
 
-        # conv blocks
-        channels = [input_channels, 512, 1024]
+    def forward(self, t: Tensor) -> Tensor:
+        return self.time_mlp(t)
 
-        conv_layers = []
-        for in_chan, out_chan in zip(channels[:-1], channels[1:]):
-            heads = out_chan // 32
 
-            conv_layers.append(
-                TimeResConv(
-                    in_chan,
-                    out_chan,
-                    time_dims,
-                    attn_heads=heads,
-                    use_pooling=True,
-                )
-            )
+class TimeCNN(TimeDependentModule):
+    def __init__(self, model_cfg: dict) -> None:
+        super().__init__()
 
-        self.conv_backbone = TimeDependentSequential(*conv_layers)
+        # time embedding, mlp for global time
+        self.time_mlp = TimeMLP(**model_cfg["time_mlp"])
+
+        self.conv_backbone = TimeDependentSequential(
+            *[TimeResConv(**layer_cfg) for layer_cfg in model_cfg["conv_backbone"]]
+        )
 
         # linear block
-        lin_layers = []
-        in_features = channels[-1]
-        for _ in range(linears):
-            out_features = in_features // 2
-            lin_layers.append(TimeDependentLinear(in_features, out_features, time_dims))
-
-            in_features = out_features
-
-        self.linear_backbone = TimeDependentSequential(*lin_layers)
+        self.linear_backbone = TimeDependentSequential(
+            *[
+                TimeDependentLinear(**layer_cfg)
+                for layer_cfg in model_cfg["linear_backbone"]
+            ]
+        )
 
         # energy projection
-        self.proj = nn.Linear(out_features, 1)  # type: ignore
+        last_linear_features = model_cfg["linear_backbone"][-1]["out_features"]
+        self.proj = nn.Linear(last_linear_features, 1)
 
         # init proj with low weights, to not explode E
         nn.init.normal_(self.proj.weight, std=0.01)
@@ -158,10 +144,15 @@ class TimeCNN(TimeDependentModule):
 
 
 def main():
+    import yaml
+
+    with open(r"nuimg/model.cfg.yaml", "r+", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)["model"]
+
     x = torch.rand((10, 256, 7, 7))
     t = torch.rand((10,))
 
-    net = TimeCNN(input_channels=256, time_dims=128)
+    net = TimeCNN(cfg)
 
     print(net(x, t).shape)
 
