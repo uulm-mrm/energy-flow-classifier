@@ -27,7 +27,10 @@ parser.add_argument(
     choices=["v1.0-mini", "v1.0-train", "v1.0-val"],
 )
 parser.add_argument(  # https://www.nuscenes.org/nuimages#data-annotation
-    "--labels", type=str, nargs="+", default=["human.pedestrian.adult", "vehicle.car"]
+    "--labels",
+    type=str,
+    nargs="+",
+    default=["human.pedestrian.adult", "vehicle.car"],
 )
 
 

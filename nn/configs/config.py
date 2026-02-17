@@ -1,5 +1,5 @@
 from typing import Any, Literal
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from data import ExportConfig
 
@@ -13,10 +13,9 @@ class DataConfig:
     shuffle: bool
     skip_last: bool
 
-    data_cfg: ExportConfig = field(init=False)
-
-    def __post_init__(self):
-        self.data_cfg = ExportConfig(self.dataset, self.version)
+    @property
+    def export_cfg(self):
+        return ExportConfig(self.dataset, self.version)
 
 
 @dataclass

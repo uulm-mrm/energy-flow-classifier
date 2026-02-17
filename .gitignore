@@ -1,12 +1,7 @@
 ### Personal ###
-/data/datasets/*
-trained
-plots
 misc
-
-# nuimg stuff
 dataset
-/nn/trained_models
+runs
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

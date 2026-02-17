@@ -2,6 +2,7 @@ import os
 import shutil
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 import yaml
 
@@ -12,14 +13,14 @@ from torch import Tensor
 from nn.configs.config import DataConfig, TrainConfig
 
 
-def __load_yaml(path: str) -> dict:
+def _load_yaml(path: str) -> dict:
     with open(path, "r+", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     return data
 
 
-def __copy_yaml(src: str, dest_dir: str) -> None:
+def _copy_yaml(src: str, dest_dir: str) -> None:
     dest = os.path.join(dest_dir, src.split("/")[-1])
     shutil.copy(src, dest)
 
@@ -30,18 +31,18 @@ class Run:
         model_cfg_path: str,
         data_cfg_path: str,
         train_cfg_path: str,
-        name: str = datetime.now(timezone.utc).isoformat(),
+        name: Optional[str],
     ) -> None:
         # set name
-        self.name = name
+        self.name = name if name else datetime.now(timezone.utc).isoformat()
 
         # load configs
-        self.model_config: dict = __load_yaml(model_cfg_path)
-        self.data_cfg = DataConfig(**__load_yaml(data_cfg_path))
-        self.train_cfg = TrainConfig(**__load_yaml(train_cfg_path))
+        self.model_config: dict = _load_yaml(model_cfg_path)
+        self.data_cfg = DataConfig(**_load_yaml(data_cfg_path)["data_config"])
+        self.train_cfg = TrainConfig(**_load_yaml(train_cfg_path)["train_config"])
 
         # set run dirs
-        self.run_dir = os.path.join("runs", name)
+        self.run_dir = os.path.join("runs", self.name)
         self.plot_dir = os.path.join(self.run_dir, "plots")
         self.cfg_dir = os.path.join(self.run_dir, "configs")
 
@@ -51,9 +52,9 @@ class Run:
         os.makedirs(self.cfg_dir, exist_ok=True)
 
         # copy configs to run
-        __copy_yaml(model_cfg_path, self.cfg_dir)
-        __copy_yaml(data_cfg_path, self.cfg_dir)
-        __copy_yaml(train_cfg_path, self.cfg_dir)
+        _copy_yaml(model_cfg_path, self.cfg_dir)
+        _copy_yaml(data_cfg_path, self.cfg_dir)
+        _copy_yaml(train_cfg_path, self.cfg_dir)
 
         # set up loss tracking batch/epoch
         self.batch_losses = {loss_name: 0.0 for loss_name in self.train_cfg.losses}
@@ -71,16 +72,35 @@ class Run:
             level=logging.INFO,
         )
 
+        # set up pt filename
+        self.model_fname = os.path.join(self.run_dir, "model.pt")
+
     def update_batch_loss(self, loss_dict: dict[str, Tensor]) -> None:
+        total = 0
+
         for loss, loss_val in loss_dict.items():
-            self.batch_losses[loss] += loss_val.item()
+            loss_val = loss_val.item()
+
+            self.batch_losses[loss] += loss_val
+            total += loss_val
+
+        self.batch_losses["total"] += total
 
     def update_epoch_loss(self, num_batches: int) -> None:
         for loss, loss_val in self.batch_losses.items():
             self.epoch_losses[loss].append(loss_val / num_batches)
 
+            self.batch_losses[loss] = 0.0  # reset loss
+
+    def log_state(self, epoch: int) -> None:
+        loss_str = " | ".join(
+            [f"{name}: {values[-1]:.4f}" for name, values in self.epoch_losses.items()]
+        )
+
+        logging.info(f"Epoch {epoch:04d} | {loss_str}")  # pylint: disable=W1203
+
     def plot_losses(self) -> None:
-        for loss, loss_vals in self.epoch_losses:
+        for loss, loss_vals in self.epoch_losses.items():
             plt.plot(loss_vals, label=loss)
 
         plt.xlabel("Epochs")

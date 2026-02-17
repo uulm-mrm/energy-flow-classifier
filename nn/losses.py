@@ -1,3 +1,5 @@
+# pylint: disable=W0613
+
 from typing import Callable
 import torch
 from torch import Tensor
@@ -33,7 +35,7 @@ def __gradient(y: Tensor, x: Tensor, create_graph: bool = True) -> Tensor:
 
 
 def convergence_loss(
-    xt: Tensor, dxt: Tensor, t: Tensor, net: TimeDependentModule
+    xt: Tensor, dxt: Tensor, t: Tensor, net: TimeDependentModule, **kwargs
 ) -> Tensor:
     """Loss for in distribution data flowing towards their respective
     class prototypes
@@ -67,7 +69,7 @@ def convergence_loss(
 
 
 def divergence_loss(
-    xt: Tensor, t: Tensor, net: TimeDependentModule, barrier: float = 1.0
+    xt: Tensor, t: Tensor, net: TimeDependentModule, barrier: float = 1.0, **kwargs
 ) -> Tensor:
     """Loss for OOD points. These should have high potential bariers to get into
     respective class prototypes, thus hindering stuff OOD to flow inwards
@@ -95,7 +97,11 @@ def divergence_loss(
 
 
 def eikonal_loss(
-    xt: Tensor, t: Tensor, net: TimeDependentModule, blanket: tuple[float, float]
+    xt: Tensor,
+    t: Tensor,
+    net: TimeDependentModule,
+    blanket: tuple[float, float],
+    **kwargs
 ) -> Tensor:
     """Calculates eikonal loss over a blanket to keep velocities low on whole domain
 
@@ -129,7 +135,7 @@ def eikonal_loss(
 
 
 def prototype_loss(
-    prototypes: Tensor, net: TimeDependentModule, sink: float = -5.0
+    prototypes: Tensor, net: TimeDependentModule, sink: float = -5.0, **kwargs
 ) -> Tensor:
     """Aims to keep energy of prototype points around the passed sink
 

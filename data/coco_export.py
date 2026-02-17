@@ -24,11 +24,18 @@ def __kvp(argument: str):
 
 
 parser = ArgumentParser()
-parser.add_argument("--version", type=str, default="val2017")
+parser.add_argument(
+    "--version",
+    type=str,
+    default="val2017",
+)
 
 # https://tech.amikelive.com/node-718/what-object-categories-labels-are-in-coco-dataset/
 parser.add_argument(
-    "--labels", type=__kvp, nargs="+", default=[(1, "person"), (3, "car")]
+    "--labels",
+    type=__kvp,
+    nargs="+",
+    default=[(1, "person"), (3, "car")],
 )
 
 
