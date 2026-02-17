@@ -1,7 +1,7 @@
 from typing import Literal
 from dataclasses import dataclass, field
 
-from nuimg.data import ExportConfig
+from data import ExportConfig
 
 
 @dataclass

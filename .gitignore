@@ -6,7 +6,7 @@ misc
 
 # nuimg stuff
 dataset
-/nuimg/trained_models
+/nn/trained_models
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
