@@ -12,12 +12,12 @@ from torchvision.ops import box_iou
 
 from nuimages import NuImages
 
-import nuimg.data.data_model as m
+import data.data_model as m
 
-from nuimg.data.config import ExportConfig
-from nuimg.data.roi_align import RoIAlignExtractor
-from nuimg.data.utils import category_mappings, get_sample_data_gt
-from nuimg.data.make_prototypes import compute_prototypes
+from data.config import ExportConfig
+from data.roi_align import RoIAlignExtractor
+from data.utils import category_mappings, get_sample_data_gt
+from data.make_prototypes import compute_prototypes
 
 parser = ArgumentParser()
 parser.add_argument(

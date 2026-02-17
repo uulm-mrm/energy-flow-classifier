@@ -9,10 +9,10 @@ import torch
 
 from torchvision.io.image import decode_image
 
-import nuimg.data.data_model as m
+import data.data_model as m
 
-from nuimg.data.config import ExportConfig
-from nuimg.data.roi_align import RoIAlignExtractor
+from data.config import ExportConfig
+from data.roi_align import RoIAlignExtractor
 
 
 def __kvp(argument: str):

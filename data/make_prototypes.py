@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 import torch
 
-from nuimg.data.config import ExportConfig
+from data.config import ExportConfig
 
 
 def compute_prototypes(cfg: ExportConfig):

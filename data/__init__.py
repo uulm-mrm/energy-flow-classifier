@@ -1,2 +1,2 @@
-from nuimg.data.config import *
-from nuimg.data.dataset import RoIFeatureDataset, RoIFeatureDataLoader
+from data.config import *
+from data.dataset import RoIFeatureDataset, RoIFeatureDataLoader

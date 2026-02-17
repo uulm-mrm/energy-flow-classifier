@@ -9,7 +9,7 @@ from math import ceil
 import torch
 from torch import Tensor
 
-from nuimg.data.config import ExportConfig
+from data.config import ExportConfig
 
 
 class RoIFeatureDataset:
