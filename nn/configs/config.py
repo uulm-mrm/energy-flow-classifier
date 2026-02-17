@@ -21,9 +21,9 @@ class DataConfig:
 
 @dataclass
 class TrainConfig:
-    run_name: str
-
     learn_rate: float
     epochs: int
-    losses: list[str]  # which losses to run with
+
+    # which losses to run with
+    losses: list[Literal["convergence", "divergence", "eikonal", "prototype"]]
     lambdas: list[float]  # lambdas for losses in order
