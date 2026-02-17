@@ -4,7 +4,7 @@ import torch
 
 from nuimages import NuImages
 
-from nuimg.data.model import GroundTruth
+from nuimg.data.data_model import GroundTruth
 
 
 def category_mappings(

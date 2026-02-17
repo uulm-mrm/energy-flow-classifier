@@ -6,7 +6,7 @@ import torchvision
 from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2
 from torchvision.models.detection.image_list import ImageList
 
-from nuimg.data.model import RoIs
+from nuimg.data.data_model import RoIs
 
 
 class RoIAlignExtractor(nn.Module):

@@ -9,7 +9,7 @@ import torch
 
 from torchvision.io.image import decode_image
 
-import nuimg.data.model as m
+import nuimg.data.data_model as m
 
 from nuimg.data.config import ExportConfig
 from nuimg.data.roi_align import RoIAlignExtractor
