@@ -1,0 +1,27 @@
+from typing import Literal
+from dataclasses import dataclass, field
+
+from nuimg.data import ExportConfig
+
+
+@dataclass
+class DataConfig:
+    dataset: Literal["nuimages-v1.0", "COCO"]
+    version: str
+
+    batch_size: int
+    shuffle: bool
+    skip_last: bool
+
+    data_cfg: ExportConfig = field(init=False)
+
+    def __post_init__(self):
+        self.data_cfg = ExportConfig(self.dataset, self.version)
+
+
+@dataclass
+class TrainConfig:
+    learn_rate: float
+    epochs: int
+    losses: list[str]  # which losses to run with
+    lambdas: list[float]  # lambdas for losses in order
