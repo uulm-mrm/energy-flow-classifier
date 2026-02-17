@@ -21,6 +21,8 @@ class DataConfig:
 
 @dataclass
 class TrainConfig:
+    run_name: str
+
     learn_rate: float
     epochs: int
     losses: list[str]  # which losses to run with

@@ -29,5 +29,3 @@ model:
     - in_features: 512
       out_features: 256
       time_dims: *tdims
-
-name: "ped_car"
