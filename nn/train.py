@@ -92,8 +92,8 @@ def train():
                 map(
                     anneal_lambda,
                     run.train_cfg.lambdas,
-                    [e] * len(run.train_cfg.lambdas),
                     run.train_cfg.warmups,
+                    [e] * len(run.train_cfg.lambdas),
                 )
             )
 

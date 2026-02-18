@@ -28,8 +28,8 @@ class TrainConfig:
     # which losses to run with
     losses: list[Literal["convergence", "divergence", "eikonal", "prototype"]]
 
-    lambdas: list[float]  # end lambdas for losses in order
-    warmups: list[int]  # warmup epochs for each lambda for annealing
+    lambdas: list[tuple[float, float]]  # start and end lambdas for losses in order
+    warmups: list[tuple[int, int]]  # warmup epochs for each lambda for annealing
 
     losses_kwargs: dict[str, Any]  # any kwargs specific to a loss
 

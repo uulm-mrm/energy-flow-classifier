@@ -196,6 +196,13 @@ def apply_losses(
 
     retval = {}
     for i, (loss, loss_fn) in enumerate(losses.items()):
+        # no need to always compute all losses
+        # if it's lambda is 0 then it means that it won't contribute this epoch
+        # still needs grad though, to be able to do total_loss.backward()
+        if lambdas[i] == 0.0:
+            retval[loss] = torch.tensor(0.0, requires_grad=True, device=x.device)
+            continue
+
         retval[loss] = lambdas[i] * loss_fn(
             xt=path_sample.xt,
             dxt=path_sample.dxt,
@@ -216,20 +223,39 @@ LOSS_DICT = {
 }
 
 
-def anneal_lambda(l: float, e: int, warmup: int) -> float:
-    """Anneals loss coefficient lambda w.r.t epoch and warmup.
-    Assumes start lambda is 0 by default, and that l is the end value after warmup
+def anneal_lambda(
+    lambda_int: tuple[float, float], warmup_int: tuple[int, int], current_epoch: int
+) -> float:
+    """Anneals lambda based on it's start and end intervals, w.r.t warmup start and end, and current epoch
 
     Args:
-        l (float): lambda to anneal
-        e (int): current epoch
-        warmup (int): warmup epochs for lambda
+        lambda_int (tuple[float, float]): start and end lambda values
+        warmup_int (tuple[int, int]): start epoch and end epoch of warmup
+        current_epoch (int): current training epoch
 
     Returns:
-        float: lambda if e >= warmup, otherwise an s curve rampup
+        float: a smooth S curve for lambda rampup starting with lambda_int[0] form warmup_int[0]
+        and capping at lambda_int[1] from warmup_int[1]
     """
-    if e >= warmup:
-        return l
+    start_l, end_l = lambda_int
+    start_e, end_e = warmup_int
 
-    # sigmoid type warmup, nice for gradients and loss
-    return l / (1 + math.exp(-10 * (e / warmup - 0.5)))
+    # handle boundaries
+    if current_epoch <= start_e:
+        return start_l
+    if current_epoch >= end_e:
+        return end_l
+
+    # compute lambda weight [0, 1]
+    progress = (current_epoch - start_e) / (end_e - start_e)
+
+    # apply sigmoid transformation
+    # map progress to a sigmoid input range [x_min, x_max].
+    # -6 to 6 covers the majority of the S-curve transition.
+    x_min, x_max = -6, 6
+    x = x_min + (x_max - x_min) * progress
+
+    sigmoid_val = 1 / (1 + math.exp(-x))
+
+    # scale and shift to match lambda_int
+    return start_l + (end_l - start_l) * sigmoid_val
