@@ -40,7 +40,7 @@ def evaluate():
     )
 
     # prototypes from run data config
-    prototypes = torch.load(cfg.get_prototypes())
+    prototypes: Tensor = torch.load(cfg.get_prototypes())
     prototypes = prototypes.to(device)
     prototypes_flat = prototypes.view(prototypes.shape[0], -1)
 

@@ -75,10 +75,7 @@ class RoIFeatureDataLoader:
             "cuda" if torch.cuda.is_available() else "cpu"
         )
 
-        if train:
-            self.prototypes = torch.load(self.dataset.prototypes_pt)
-        else:
-            self.prototypes = None
+        self.prototypes = torch.load(self.dataset.prototypes_pt) if train else None
 
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""

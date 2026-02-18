@@ -59,6 +59,10 @@ def train():
         run.data_cfg.skip_last,
         device=device,
     )
+
+    assert (
+        dl.prototypes is not None
+    ), "Prototypes are None in training script. This is bad."
     prototypes = dl.prototypes.to(device)
 
     # model

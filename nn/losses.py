@@ -35,7 +35,12 @@ def __gradient(y: Tensor, x: Tensor, create_graph: bool = True) -> Tensor:
 
 
 def convergence_loss(
-    xt: Tensor, dxt: Tensor, t: Tensor, net: TimeDependentModule, **kwargs
+    xt: Tensor,
+    dxt: Tensor,
+    t: Tensor,
+    net: TimeDependentModule,
+    conv_sigma: float = 0.01,
+    **kwargs
 ) -> Tensor:
     """Loss for in distribution data flowing towards their respective
     class prototypes
@@ -45,31 +50,33 @@ def convergence_loss(
         dxt (Tensor): velocity induced by the probability path, shape (B, C, H, W)
         t (Tensor): time from when input is sampled, shape (B,)
         net (TimeDependentModule): network to predict point potential
+        conv_sigma (float): standard deviation for the noise to apply to data. Defaults to 0.01.
 
     Returns:
         Tensor: Convergence loss for in distribution points
     """
 
-    # sample small noise around xt
-    sigma = 0.05
-    eps = torch.randn_like(xt) * sigma
-
-    # jitter xt by eps to have wider paths
-    xt_jittered = xt + eps
+    # jitter xt with noise to have wider paths
+    xt_jittered = xt + torch.randn_like(xt) * conv_sigma
     xt_jittered = xt_jittered.detach().requires_grad_(True)
 
     # get potential
     potential = net.forward(xt_jittered, t.unsqueeze(1))
 
     # get speed as the negative gradient of the potential
-    dxt_hat = -__gradient(potential.sum(), xt_jittered, create_graph=True)
+    dxt_hat = -1.0 * __gradient(potential.sum(), xt_jittered, create_graph=True)
 
     # get difference between speeds
-    return (dxt_hat - (dxt - eps)).square().mean()
+    return (dxt_hat - dxt).square().mean()
 
 
 def divergence_loss(
-    xt: Tensor, t: Tensor, net: TimeDependentModule, barrier: float = 1.0, **kwargs
+    xt: Tensor,
+    t: Tensor,
+    net: TimeDependentModule,
+    barrier: float = 1.0,
+    div_sigma: float = 0.1,
+    **kwargs
 ) -> Tensor:
     """Loss for OOD points. These should have high potential bariers to get into
     respective class prototypes, thus hindering stuff OOD to flow inwards
@@ -79,14 +86,14 @@ def divergence_loss(
         t (Tensor): time from when input is sampled, shape (B,)
         net (TimeDependentModule): network to predict point potential
         barrier (float, optional): potential barrier height which to aim for. Defaults to 1.0.
+        div_sigma (float): standard deviation for the noise to apply to data. Defaults to 0.1.
 
     Returns:
         Tensor: loss pushing the energy landscape to have barriers around in distribution data
     """
 
-    # sample points off-path with much more noise
-    sigma = 1.0
-    xt_noise = xt + torch.randn_like(xt) * sigma
+    # sample points "off-path"
+    xt_noise = xt + torch.randn_like(xt) * div_sigma
 
     # get potentials for both, we want noise to have higher potential than data
     data_potential = net.forward(xt, t.view(-1, 1))
@@ -98,44 +105,45 @@ def divergence_loss(
 
 def eikonal_loss(
     xt: Tensor,
+    dxt: Tensor,
     t: Tensor,
     net: TimeDependentModule,
-    blanket: tuple[float, float],
+    eik_sigma: float = 0.05,
     **kwargs
 ) -> Tensor:
-    """Calculates eikonal loss over a blanket to keep velocities low on whole domain
+    """Calculates eikonal loss around data to keep velocities low on whole domain
 
     Args:
         xt (Tensor): input sampled over probability path, to copy information from,
             shape (B, C, H, W)
+        dxt (Tensor): velocity induced by the probability path, shape (B, C, H, W)
         t (Tensor): time from when input is sampled, shape (B,)
         net (TimeDependentModule): network to predict point potential
-        blanket (tuple[float, float]): a square area from which to sample points,
-            should be around where the data actually lies, if not sure just cast a wide blanket
+        eik_sigma (float): deviation for noise around input. Defaults to 0.05.
 
     Returns:
-        Tensor: eikonal loss for noise
+        Tensor: eikonal loss for noisy data
     """
 
-    # sample a random blanket around data and say it's "sampled" over time
-    xt_blanket = torch.empty_like(xt).uniform_(*blanket)
-    xt_blanket = xt_blanket.detach().requires_grad_(True)
+    # sample around data
+    xt_proximal = xt + torch.randn_like(xt) * eik_sigma
+    xt_proximal = xt_proximal.detach().requires_grad_(True)
 
     # get velocity
-    blanket_potential = net.forward(xt_blanket, t)
-    blanket_velocity = __gradient(
-        blanket_potential.sum(), xt_blanket, create_graph=True
-    )
+    proximal_potential = net.forward(xt_proximal, t)
+    grad_phi = __gradient(proximal_potential.sum(), xt_proximal, create_graph=True)
 
     # calc norm
-    velocity_norm = blanket_velocity.flatten(start_dim=1).norm(p=2, dim=-1)
+    grad_norm = grad_phi.flatten(start_dim=1).norm(p=2, dim=-1)
+    target_norm = dxt.flatten(start_dim=1).norm(p=2, dim=-1).detach()
 
-    # calc loss
-    return (velocity_norm - 1).square().mean()
+    # calc loss as the difference between the expected velocity for the batch
+    # vs the computed loss for the batch
+    return (grad_norm - target_norm).square().mean()
 
 
 def prototype_loss(
-    prototypes: Tensor, net: TimeDependentModule, sink: float = -5.0, **kwargs
+    prototypes: Tensor, net: TimeDependentModule, sink: float = -1.0, **kwargs
 ) -> Tensor:
     """Aims to keep energy of prototype points around the passed sink
 
@@ -153,7 +161,7 @@ def prototype_loss(
 
     prototype_potential = net.forward(prototypes, t)
 
-    return torch.relu(prototype_potential - sink).mean()
+    return (prototype_potential - sink).square().mean()
 
 
 def apply_losses(
