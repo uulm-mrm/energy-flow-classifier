@@ -1,12 +1,18 @@
 train_config:
   learn_rate: !!float 1e-4
-  epochs: 1000
+  epochs: 2000
 
   losses:
     - convergence
+    - divergence
   
-  lambdas: [1.0]
-  warmups: [0]
+  lambdas:
+    - 1.0
+    - 1.0
+
+  warmups:
+    - 0
+    - 1500
 
   losses_kwargs:
     conv_sigma: 0.01  # smallest

@@ -1,10 +1,10 @@
 eval_config:
-  run_name: !!str 2026-02-18T14:20:33.505646+00:00
+  run_name: !!str 2026-02-18T15:12:56.431916+00:00
 
-  dataset: nuimages-v1.0
-  version: v1.0-mini
-  # dataset: COCO
-  # version: val2017
+  # dataset: nuimages-v1.0
+  # version: v1.0-mini
+  dataset: COCO
+  version: val2017
   batch_size: 10
   
   ode_steps: 10
