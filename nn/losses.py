@@ -1,13 +1,15 @@
 # pylint: disable=W0613
 
+import math
 from typing import Callable
+
 import torch
 from torch import Tensor
 
 from fm.flow_matching import AffinePath
 from fm.modules import TimeDependentModule
 
-__all__ = ["LOSS_DICT", "apply_losses"]
+__all__ = ["LOSS_DICT", "apply_losses", "anneal_lambda"]
 
 
 def __gradient(y: Tensor, x: Tensor, create_graph: bool = True) -> Tensor:
@@ -212,3 +214,22 @@ LOSS_DICT = {
     "eikonal": eikonal_loss,
     "prototype": prototype_loss,
 }
+
+
+def anneal_lambda(l: float, e: int, warmup: int) -> float:
+    """Anneals loss coefficient lambda w.r.t epoch and warmup.
+    Assumes start lambda is 0 by default, and that l is the end value after warmup
+
+    Args:
+        l (float): lambda to anneal
+        e (int): current epoch
+        warmup (int): warmup epochs for lambda
+
+    Returns:
+        float: lambda if e >= warmup, otherwise an s curve rampup
+    """
+    if e >= warmup:
+        return l
+
+    # sigmoid type warmup, nice for gradients and loss
+    return l / (1 + math.exp(-10 * (e / warmup - 0.5)))

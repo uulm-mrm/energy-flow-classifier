@@ -14,7 +14,7 @@ from data import RoIFeatureDataset, RoIFeatureDataLoader
 
 from nn.run import Run
 from nn.models import TimeCNN
-from nn.losses import LOSS_DICT, apply_losses
+from nn.losses import LOSS_DICT, apply_losses, anneal_lambda
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -88,6 +88,15 @@ def train():
             y: Tensor = y.to(device)
 
             # get all losses
+            annealed_lambdas = list(
+                map(
+                    anneal_lambda,
+                    run.train_cfg.lambdas,
+                    [e] * len(run.train_cfg.lambdas),
+                    run.train_cfg.warmups,
+                )
+            )
+
             loss_vals = apply_losses(
                 x,
                 y,
@@ -95,7 +104,7 @@ def train():
                 path,
                 net,
                 losses,
-                run.train_cfg.lambdas,
+                annealed_lambdas,
                 **run.train_cfg.losses_kwargs,
             )
 

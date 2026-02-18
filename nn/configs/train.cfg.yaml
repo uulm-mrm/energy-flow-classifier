@@ -6,6 +6,7 @@ train_config:
     - convergence
   
   lambdas: [1.0]
+  warmups: [0]
 
   losses_kwargs:
     conv_sigma: 0.01  # smallest
