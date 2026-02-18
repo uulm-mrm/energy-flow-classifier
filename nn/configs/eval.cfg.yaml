@@ -1,8 +1,8 @@
 eval_config:
-  run_name: !!str 2026-02-18T08:46:45.403201+00:00
+  run_name: !!str 2026-02-18T10:42:30.899224+00:00
 
-  dataset: nuimages-v1.0
-  version: v1.0-mini
+  dataset: COCO
+  version: val2017
   batch_size: 10
   
   ode_steps: 10

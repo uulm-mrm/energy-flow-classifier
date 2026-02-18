@@ -34,11 +34,14 @@ def evaluate():
     # dataset
     ds = RoIFeatureDataset(cfg.get_export_cfg())
 
-    # dataloader with prototypes
+    # dataloader
     dl = RoIFeatureDataLoader(
-        ds, cfg.batch_size, shuffle=False, skip_last=False, device=device
+        ds, cfg.batch_size, shuffle=False, skip_last=False, device=device, train=False
     )
-    prototypes = dl.prototypes.to(device)
+
+    # prototypes from run data config
+    prototypes = torch.load(cfg.get_prototypes())
+    prototypes = prototypes.to(device)
     prototypes_flat = prototypes.view(prototypes.shape[0], -1)
 
     # model
@@ -55,10 +58,12 @@ def evaluate():
     for x, _, y in tqdm(dl, desc="Processing Batches"):
         x: Tensor = x.to(device)
         y: Tensor = y.to(device)
+        print(y)
 
         # compute potential
         t = torch.zeros((x.shape[0], 1), dtype=x.dtype, device=x.device)
         potential = net.forward(x, t)
+        print(potential)
 
         # solve process to get distances from prototypes
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
@@ -68,6 +73,7 @@ def evaluate():
         sols = x_traj[-1]
         sols_flat = sols.view(sols.shape[0], -1)
         dist_measure = torch.cdist(sols_flat, prototypes_flat)
+        print(dist_measure)
 
 
 if __name__ == "__main__":

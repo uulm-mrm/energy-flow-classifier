@@ -1,6 +1,6 @@
 data_config:
   dataset: nuimages-v1.0
-  version: v1.0-mini
+  version: v1.0-train
 
   batch_size: 2048
   shuffle: true

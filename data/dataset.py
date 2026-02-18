@@ -61,6 +61,7 @@ class RoIFeatureDataLoader:
         shuffle: bool,
         skip_last: bool,
         device: torch.device | None = None,
+        train: bool = True,
     ) -> None:
 
         self.dataset = dataset
@@ -74,7 +75,10 @@ class RoIFeatureDataLoader:
             "cuda" if torch.cuda.is_available() else "cpu"
         )
 
-        self.prototypes = torch.load(self.dataset.prototypes_pt)
+        if train:
+            self.prototypes = torch.load(self.dataset.prototypes_pt)
+        else:
+            self.prototypes = None
 
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""
@@ -134,7 +138,12 @@ class RoIFeatureDataLoader:
             feats, labs = self.get_from_file(fname, idxs)
 
             features.append(feats)
-            prototypes.append(self.prototypes[labs])
+
+            if self.prototypes is not None:
+                prototypes.append(self.prototypes[labs])
+            else:
+                prototypes.append(torch.zeros_like(labs))
+
             labels.append(labs)
 
         # return and push to device

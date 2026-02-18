@@ -51,3 +51,9 @@ class EvalConfig:
 
     def get_export_cfg(self) -> ExportConfig:
         return ExportConfig(self.dataset, self.version)
+
+    def get_prototypes(self) -> str:
+        data_cfg_path = os.path.join("runs", self.run_name, "configs", "data.cfg.yaml")
+        data_cfg = DataConfig(**load_yaml(data_cfg_path)["data_config"])
+
+        return data_cfg.get_export_cfg().prototypes

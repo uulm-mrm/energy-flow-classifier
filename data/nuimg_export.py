@@ -66,7 +66,7 @@ def export(cfg: ExportConfig, args: Namespace):
     offset = 0
 
     # loop over images
-    for sample_data in tqdm(nuim.sample_data, desc="Iterating Samples"):
+    for sample_data in tqdm(nuim.sample_data[:100_000], desc="Iterating Samples"):
 
         # only key frames have labels
         if not sample_data["is_key_frame"]:

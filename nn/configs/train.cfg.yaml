@@ -2,8 +2,10 @@ train_config:
   learn_rate: !!float 1e-4
   epochs: 100
 
-  losses: [convergence, divergence, eikonal, prototype]
-  lambdas: [1.0, 1.0, 0.1, 0.1]
+  # losses: [convergence, divergence, eikonal, prototype]
+  # lambdas: [1.0, 1.0, 0.1, 0.1]
+  losses: [convergence]
+  lambdas: [1.0]
   losses_kwargs:
     barrier: 1.0
     blanket: [-3.0, 3.0]
