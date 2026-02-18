@@ -49,7 +49,7 @@ def train():
     run = Run(args.model_config, args.data_config, args.train_config, args.name)
 
     # dataset
-    ds = RoIFeatureDataset(run.data_cfg.export_cfg)
+    ds = RoIFeatureDataset(run.data_cfg.get_export_cfg())
 
     # dataloader with prototypes as a variable
     dl = RoIFeatureDataLoader(

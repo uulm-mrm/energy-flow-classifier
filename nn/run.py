@@ -4,25 +4,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-import yaml
-
 import matplotlib.pyplot as plt
 
 from torch import Tensor
 
-from nn.configs.config import DataConfig, TrainConfig
-
-
-def _load_yaml(path: str) -> dict:
-    with open(path, "r+", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    return data
-
-
-def _copy_yaml(src: str, dest_dir: str) -> None:
-    dest = os.path.join(dest_dir, src.split("/")[-1])
-    shutil.copy(src, dest)
+from nn.configs import DataConfig, TrainConfig, load_yaml
 
 
 class Run:
@@ -37,9 +23,9 @@ class Run:
         self.name = name if name else datetime.now(timezone.utc).isoformat()
 
         # load configs
-        self.model_config: dict = _load_yaml(model_cfg_path)
-        self.data_cfg = DataConfig(**_load_yaml(data_cfg_path)["data_config"])
-        self.train_cfg = TrainConfig(**_load_yaml(train_cfg_path)["train_config"])
+        self.model_config: dict = load_yaml(model_cfg_path)
+        self.data_cfg = DataConfig(**load_yaml(data_cfg_path)["data_config"])
+        self.train_cfg = TrainConfig(**load_yaml(train_cfg_path)["train_config"])
 
         # set run dirs
         self.run_dir = os.path.join("runs", self.name)
@@ -52,9 +38,9 @@ class Run:
         os.makedirs(self.cfg_dir, exist_ok=True)
 
         # copy configs to run
-        _copy_yaml(model_cfg_path, self.cfg_dir)
-        _copy_yaml(data_cfg_path, self.cfg_dir)
-        _copy_yaml(train_cfg_path, self.cfg_dir)
+        shutil.copy(model_cfg_path, os.path.join(self.cfg_dir, "model.cfg.yaml"))
+        shutil.copy(data_cfg_path, os.path.join(self.cfg_dir, "data.cfg.yaml"))
+        shutil.copy(train_cfg_path, os.path.join(self.cfg_dir, "train.cfg.yaml"))
 
         # set up loss tracking batch/epoch
         self.batch_losses = {loss_name: 0.0 for loss_name in self.train_cfg.losses}
