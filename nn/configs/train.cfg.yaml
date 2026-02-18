@@ -1,6 +1,6 @@
 train_config:
   learn_rate: !!float 1e-4
-  epochs: 1000
+  epochs: 100
 
   losses: [convergence, divergence, eikonal, prototype]
   lambdas: [1.0, 1.0, 0.1, 0.1]

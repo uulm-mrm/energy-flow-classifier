@@ -38,10 +38,16 @@ class EvalConfig:
     # eval dataset
     dataset: Literal["nuimages-v1.0", "COCO"]
     version: str
+    batch_size: int
+
+    ode_steps: int
 
     def get_model_cfg(self) -> dict:
-        cfg_path = os.path.join("runs", self.run_name, "model.cfg.yaml")
+        cfg_path = os.path.join("runs", self.run_name, "configs", "model.cfg.yaml")
         return load_yaml(cfg_path)
+
+    def get_model_weights(self) -> str:
+        return os.path.join("runs", self.run_name, "model.pt")
 
     def get_export_cfg(self) -> ExportConfig:
         return ExportConfig(self.dataset, self.version)

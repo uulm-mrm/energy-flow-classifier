@@ -44,7 +44,7 @@ def train():
     torch.manual_seed(42)
     torch.set_printoptions(precision=4, sci_mode=False)
 
-    # create args
+    # create run
     args = parser.parse_args()
     run = Run(args.model_config, args.data_config, args.train_config, args.name)
 
@@ -75,7 +75,7 @@ def train():
     # epoch loop
     for e in (pbar := tqdm(range(run.train_cfg.epochs))):
         # batch loop
-        for x, y in dl:
+        for x, y, _ in dl:
             # reset optimizer
             optim.zero_grad()
 

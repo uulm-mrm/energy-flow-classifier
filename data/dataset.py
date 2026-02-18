@@ -102,7 +102,7 @@ class RoIFeatureDataLoader:
 
         return self
 
-    def __next__(self) -> tuple[Tensor, Tensor]:
+    def __next__(self) -> tuple[Tensor, Tensor, Tensor]:
         # __next__ is what's done at each iteration point
 
         # check exit
@@ -128,23 +128,26 @@ class RoIFeatureDataLoader:
         # load data
         features: list[Tensor] = []
         labels: list[Tensor] = []
+        prototypes: list[Tensor] = []
 
         for fname, idxs in fname_map.items():
             feats, labs = self.get_from_file(fname, idxs)
 
             features.append(feats)
-            labels.append(self.prototypes[labs])
+            prototypes.append(self.prototypes[labs])
+            labels.append(labs)
 
         # return and push to device
         return (
             torch.cat(features, dim=0).to(self.device),
+            torch.cat(prototypes, dim=0).to(self.device),
             torch.cat(labels, dim=0).to(self.device),
         )
 
 
 if __name__ == "__main__":
     with open(
-        r"nuimg/dataset/nuimages-v1.0_frames/v1.0-mini/config.json",
+        r"dataset/nuimages-v1.0_frames/v1.0-mini/config.json",
         "r+",
         encoding="utf-8",
     ) as _f:
@@ -154,5 +157,5 @@ if __name__ == "__main__":
     ds = RoIFeatureDataset(cfg)
     dl = RoIFeatureDataLoader(ds, batch_size=50, shuffle=True, skip_last=False)
 
-    for x, y in dl:
-        print(x.shape, y.shape)
+    for x, p, y in dl:
+        print(x.shape, p.shape, y.shape)
