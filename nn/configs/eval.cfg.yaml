@@ -1,5 +1,5 @@
 eval_config:
-  run_name: !!str 2026-02-18T15:12:56.431916+00:00
+  run_name: !!str 2026-02-18T16:02:21.030217+00:00
 
   dataset: nuimages-v1.0
   version: v1.0-mini

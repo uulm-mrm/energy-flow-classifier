@@ -226,7 +226,8 @@ LOSS_DICT = {
 def anneal_lambda(
     lambda_int: tuple[float, float], warmup_int: tuple[int, int], current_epoch: int
 ) -> float:
-    """Anneals lambda based on it's start and end intervals, w.r.t warmup start and end, and current epoch
+    """Anneals lambda based on it's start and end intervals,
+    w.r.t warmup start and end, and current epoch
 
     Args:
         lambda_int (tuple[float, float]): start and end lambda values

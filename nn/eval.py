@@ -63,6 +63,7 @@ def evaluate():
         # compute potential
         t = torch.zeros((x.shape[0], 1), dtype=x.dtype, device=x.device)
         potential = net.forward(x, t)
+        print(potential)
 
         # solve process to get distances from prototypes
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
