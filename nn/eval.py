@@ -1,4 +1,5 @@
 import os
+import shutil
 from argparse import ArgumentParser
 
 from tqdm import tqdm
@@ -19,6 +20,7 @@ parser.add_argument(
     type=str,
     default=os.path.join("nn", "configs", "eval.cfg.yaml"),
 )
+parser.add_argument("--name", type=str, required=False)
 
 
 def evaluate():
@@ -30,6 +32,13 @@ def evaluate():
     # get config
     args = parser.parse_args()
     cfg = EvalConfig(**load_yaml(args.eval_config)["eval_config"])
+
+    # make cfg dir
+    eval_dir = cfg.get_eval_dir(args.name)
+    os.makedirs(eval_dir, exist_ok=True)
+
+    # copy config
+    shutil.copy(args.eval_config, os.path.join(eval_dir, "eval.cfg.yaml"))
 
     # dataset
     ds = RoIFeatureDataset(cfg.get_export_cfg())
@@ -55,15 +64,16 @@ def evaluate():
     )
 
     # go over data
-    for x, _, y in tqdm(dl, desc="Processing Batches"):
+    for batch, (x, _, y) in tqdm(enumerate(dl), desc="Processing Batches"):
+        state = {}
+
         x: Tensor = x.to(device)
         y: Tensor = y.to(device)
-        print(y)
+        y = y.view(-1, 1)
 
         # compute potential
         t = torch.zeros((x.shape[0], 1), dtype=x.dtype, device=x.device)
         potential = net.forward(x, t)
-        print(potential)
 
         # solve process to get distances from prototypes
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
@@ -73,7 +83,14 @@ def evaluate():
         sols = x_traj[-1]
         sols_flat = sols.view(sols.shape[0], -1)
         dist_measure = torch.cdist(sols_flat, prototypes_flat)
-        print(dist_measure)
+
+        # save state as pt
+        state["meta"] = ["labels", "potential", "distance"]
+        state["sizes"] = [y.shape[1], potential.shape[1], dist_measure.shape[1]]
+        state["data"] = torch.cat([y, potential, dist_measure], dim=1)
+
+        fname = os.path.join(eval_dir, f"batch_{batch}.pt")
+        torch.save(state, fname)
 
 
 if __name__ == "__main__":
