@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 
 from fm.flow_matching import AffinePath
-from fm.flow_matching.scheduler import CosineScheduler
+from fm.flow_matching.scheduler import OTScheduler
 from fm.modules import EMA
 
 from data import RoIFeatureDataset, RoIFeatureDataLoader
@@ -70,7 +70,7 @@ def train():
     ema = EMA(net, rate=0.999)
 
     # path
-    path = AffinePath(CosineScheduler())
+    path = AffinePath(OTScheduler())
 
     # optim and losses
     optim = torch.optim.AdamW(net.parameters(), lr=run.train_cfg.learn_rate)
