@@ -76,7 +76,7 @@ def divergence_loss(
     xt: Tensor,
     t: Tensor,
     net: TimeDependentModule,
-    barrier: float = 1.0,
+    rel_margin: float = 0.1,
     div_sigma: float = 0.1,
     **kwargs
 ) -> Tensor:
@@ -87,7 +87,7 @@ def divergence_loss(
         xt (Tensor): input sampled over probability path, shape (B, C, H, W)
         t (Tensor): time from when input is sampled, shape (B,)
         net (TimeDependentModule): network to predict point potential
-        barrier (float, optional): potential barrier height which to aim for. Defaults to 1.0.
+        rel_margin (float, optional): relative difference between the potentials. Defaults to 0.1.
         div_sigma (float): standard deviation for the noise to apply to data. Defaults to 0.1.
 
     Returns:
@@ -101,8 +101,14 @@ def divergence_loss(
     data_potential = net.forward(xt, t.view(-1, 1))
     noise_potential = net.forward(xt_noise, t.view(-1, 1))
 
+    # calculate the relative barrier so it is const agnostic
+    # add 1e-3 so that there is always _some_ barrier if data_potential is 0
+    relative_barrier = (rel_margin * data_potential.abs()) + 1e-3
+
     # hinge loss for potential forcing it to be higher
-    return torch.relu(barrier - (noise_potential - data_potential)).mean()
+    diff = noise_potential - data_potential
+
+    return torch.relu(relative_barrier - diff).mean()
 
 
 def eikonal_loss(
@@ -242,8 +248,8 @@ def anneal_lambda(
     start_e, end_e = warmup_int
 
     # handle boundaries
-    if current_epoch <= start_e:
-        return start_l
+    if current_epoch < start_e:
+        return 0.0
     if current_epoch >= end_e:
         return end_l
 

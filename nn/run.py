@@ -80,7 +80,7 @@ class Run:
 
     def log_state(self, epoch: int) -> None:
         loss_str = " | ".join(
-            [f"{name}: {values[-1]:.4f}" for name, values in self.epoch_losses.items()]
+            [f"{name}: {values[-1]:.6f}" for name, values in self.epoch_losses.items()]
         )
 
         logging.info(f"Epoch {epoch:04d} | {loss_str}")  # pylint: disable=W1203

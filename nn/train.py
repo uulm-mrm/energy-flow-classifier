@@ -78,6 +78,16 @@ def train():
 
     # epoch loop
     for e in (pbar := tqdm(range(run.train_cfg.epochs))):
+        # compute annealed loss coefficients
+        annealed_lambdas = list(
+            map(
+                anneal_lambda,
+                run.train_cfg.lambdas,
+                run.train_cfg.warmups,
+                [e + 1] * len(run.train_cfg.lambdas),
+            )
+        )
+
         # batch loop
         for x, y, _ in dl:
             # reset optimizer
@@ -88,15 +98,6 @@ def train():
             y: Tensor = y.to(device)
 
             # get all losses
-            annealed_lambdas = list(
-                map(
-                    anneal_lambda,
-                    run.train_cfg.lambdas,
-                    run.train_cfg.warmups,
-                    [e] * len(run.train_cfg.lambdas),
-                )
-            )
-
             loss_vals = apply_losses(
                 x,
                 y,

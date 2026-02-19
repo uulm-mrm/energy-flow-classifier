@@ -1,6 +1,7 @@
 import os
 from typing import Any, Literal
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from data import ExportConfig
 
@@ -60,3 +61,7 @@ class EvalConfig:
         data_cfg = DataConfig(**load_yaml(data_cfg_path)["data_config"])
 
         return data_cfg.get_export_cfg().prototypes
+
+    def get_eval_dir(self, name: str | None = None) -> str:
+        name = name if name else datetime.now(timezone.utc).isoformat()
+        return os.path.join("runs", self.run_name, "evals", name)
