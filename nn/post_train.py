@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 
 from tqdm import tqdm
 
+from scipy import stats
+
 import torch
 from torch import Tensor
 
@@ -54,17 +56,13 @@ def post_train():
     )
 
     # go over data
-    batch_stats = defaultdict(lambda: {"pot_sum": 0.0, "dist_sum": 0.0, "count": 0})
+    batch_stats = defaultdict(lambda: {"dist": []})
     for x, _, y in tqdm(dl, desc="Processing Batches"):
         x: Tensor = x.to(device)
         y: Tensor = y.to(device)
 
         # get the categories present in batch
         cats = torch.unique(y)
-
-        # compute potential
-        t = torch.zeros((x.shape[0], 1), dtype=x.dtype, device=x.device)
-        potential = net.forward(x, t)
 
         # solve process to get distances from prototypes
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
@@ -80,18 +78,24 @@ def post_train():
             mask = y == cat
             cat = cat.item()
 
-            batch_stats[cat]["pot_sum"] += potential[mask].detach().sum().item()
-            batch_stats[cat]["dist_sum"] += dist_measure[mask, cat].detach().sum().item()  # type: ignore
-            batch_stats[cat]["count"] += mask.detach().sum().item()
+            batch_stats[cat]["dist"].append(dist_measure[mask, cat].detach().cpu())
 
     # make post_train dict
     post_train_res = {
         cat: {
-            "mean_potential": data["pot_sum"] / data["count"],
-            "mean_dist": data["dist_sum"] / data["count"],
+            "shape": torch.empty(size=(0,)),
+            "loc": torch.empty(size=(0,)),
+            "scale": torch.empty(size=(0,)),
         }
-        for cat, data in batch_stats.items()
+        for cat in batch_stats
     }
+    for cat, data in batch_stats.items():
+        dist = torch.cat(data["dist"], dim=0).numpy()
+        shape, loc, scale = stats.gamma.fit(dist)
+
+        post_train_res[cat]["shape"] = torch.tensor(shape)
+        post_train_res[cat]["loc"] = torch.tensor(loc)
+        post_train_res[cat]["scale"] = torch.tensor(scale)
 
     # save res to pt
     torch.save(post_train_res, os.path.join(run.run_dir, "post_train.pt"))
