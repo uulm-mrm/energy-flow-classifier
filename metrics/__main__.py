@@ -6,7 +6,7 @@ import torch
 
 from nn.run import Run
 
-import experiments
+import metrics
 
 parser = ArgumentParser()
 parser.add_argument("--run", type=str, default="debug_run")
@@ -14,7 +14,7 @@ parser.add_argument("--eval", type=str)
 parser.add_argument("--metrics", type=str, nargs="+", default=["accuracy"])
 
 METRICS: dict[str, Callable[[Run, str, torch.device | str], float]] = {
-    "accuracy": experiments.accuracy.metric
+    "accuracy": metrics.accuracy.metric
 }
 
 
