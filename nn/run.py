@@ -32,6 +32,7 @@ class Run:
         self.run_dir = os.path.join("runs", self.name)
         self.plot_dir = os.path.join(self.run_dir, "plots")
         self.cfg_dir = os.path.join(self.run_dir, "configs")
+        self.eval_dir = os.path.join(self.run_dir, "evals")
         self.checkpoints_dir = os.path.join(self.run_dir, "checkpoints")
 
         # set up checkpoints filenames
