@@ -38,6 +38,7 @@ class TrainConfig:
 @dataclass
 class EvalConfig:
     run_name: str
+    checkpoint: int
 
     # eval dataset
     dataset: Literal["nuimages-v1.0", "COCO"]
@@ -51,7 +52,9 @@ class EvalConfig:
         return load_yaml(cfg_path)
 
     def get_model_weights(self) -> str:
-        return os.path.join("runs", self.run_name, "model.pt")
+        return os.path.join(
+            "runs", self.run_name, "checkpoints", f"checkpoint_{self.checkpoint}.pt"
+        )
 
     def get_export_cfg(self) -> ExportConfig:
         return ExportConfig(self.dataset, self.version)

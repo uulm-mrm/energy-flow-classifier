@@ -47,6 +47,7 @@ def train():
     # create run
     args = parser.parse_args()
     run = Run(args.model_config, args.data_config, args.train_config, args.name)
+    save_every = run.train_cfg.epochs // 10
 
     # dataset
     ds = RoIFeatureDataset(run.data_cfg.get_export_cfg())
@@ -127,6 +128,10 @@ def train():
         # log states
         run.log_state(epoch=e)
 
+        # save net every 1/10 epochs
+        if (e % save_every) == 0:
+            torch.save(net.state_dict(), run.checkpoint_fname.format(e // save_every))
+
         pbar.set_description(f"Loss: {run.epoch_losses["total"][-1]:.4f}")
 
     # freeze model
@@ -135,9 +140,6 @@ def train():
 
     # plot losses
     run.plot_losses()
-
-    # save net
-    torch.save(net.state_dict(), run.model_fname)
 
 
 if __name__ == "__main__":

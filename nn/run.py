@@ -58,8 +58,11 @@ class Run:
             level=logging.INFO,
         )
 
-        # set up pt filename
-        self.model_fname = os.path.join(self.run_dir, "model.pt")
+        # set up checkpoints dir and filenames
+        self.checkpoints_dir = os.path.join(self.run_dir, "checkpoints")
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
+
+        self.checkpoint_fname = os.path.join(self.checkpoints_dir, "checkpoint_{}.pt")
 
     def update_batch_loss(self, loss_dict: dict[str, Tensor]) -> None:
         total = 0
