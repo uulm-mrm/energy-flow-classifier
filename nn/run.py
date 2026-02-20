@@ -18,8 +18,9 @@ class Run:
         data_cfg_path: str,
         train_cfg_path: str,
         name: Optional[str],
+        train: bool,
     ) -> None:
-        # set name
+        # set name and train state
         self.name = name if name else datetime.now(timezone.utc).isoformat()
 
         # load configs
@@ -31,23 +32,39 @@ class Run:
         self.run_dir = os.path.join("runs", self.name)
         self.plot_dir = os.path.join(self.run_dir, "plots")
         self.cfg_dir = os.path.join(self.run_dir, "configs")
+        self.checkpoints_dir = os.path.join(self.run_dir, "checkpoints")
 
+        # set up checkpoints filenames
+        self.checkpoint_fname = os.path.join(self.checkpoints_dir, "checkpoint_{}.pt")
+
+        if train:
+            self.__train_init(model_cfg_path, data_cfg_path, train_cfg_path)
+
+    @staticmethod
+    def init_from_name(name: str) -> "Run":
+        run_configs_dir = os.path.join("runs", name, "configs")
+
+        return Run(
+            model_cfg_path=os.path.join(run_configs_dir, "model.cfg.yaml"),
+            data_cfg_path=os.path.join(run_configs_dir, "data.cfg.yaml"),
+            train_cfg_path=os.path.join(run_configs_dir, "train.cfg.yaml"),
+            name=name,
+            train=False,
+        )
+
+    def __train_init(
+        self, model_cfg_path: str, data_cfg_path: str, train_cfg_path: str
+    ) -> None:
         # make dirs for run
         os.makedirs(self.run_dir, exist_ok=True)
         os.makedirs(self.plot_dir, exist_ok=True)
         os.makedirs(self.cfg_dir, exist_ok=True)
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
 
         # copy configs to run
         shutil.copy(model_cfg_path, os.path.join(self.cfg_dir, "model.cfg.yaml"))
         shutil.copy(data_cfg_path, os.path.join(self.cfg_dir, "data.cfg.yaml"))
         shutil.copy(train_cfg_path, os.path.join(self.cfg_dir, "train.cfg.yaml"))
-
-        # set up loss tracking batch/epoch
-        self.batch_losses = {loss_name: 0.0 for loss_name in self.train_cfg.losses}
-        self.batch_losses["total"] = 0.0
-
-        self.epoch_losses = {loss_name: [] for loss_name in self.train_cfg.losses}
-        self.epoch_losses["total"] = []
 
         # make logger
         logging.basicConfig(
@@ -58,11 +75,12 @@ class Run:
             level=logging.INFO,
         )
 
-        # set up checkpoints dir and filenames
-        self.checkpoints_dir = os.path.join(self.run_dir, "checkpoints")
-        os.makedirs(self.checkpoints_dir, exist_ok=True)
+        # set up loss tracking batch/epoch
+        self.batch_losses = {loss_name: 0.0 for loss_name in self.train_cfg.losses}
+        self.batch_losses["total"] = 0.0
 
-        self.checkpoint_fname = os.path.join(self.checkpoints_dir, "checkpoint_{}.pt")
+        self.epoch_losses = {loss_name: [] for loss_name in self.train_cfg.losses}
+        self.epoch_losses["total"] = []
 
     def update_batch_loss(self, loss_dict: dict[str, Tensor]) -> None:
         total = 0

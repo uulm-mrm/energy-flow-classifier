@@ -46,7 +46,9 @@ def train():
 
     # create run
     args = parser.parse_args()
-    run = Run(args.model_config, args.data_config, args.train_config, args.name)
+    run = Run(
+        args.model_config, args.data_config, args.train_config, args.name, train=True
+    )
     save_every = run.train_cfg.epochs // 10
 
     # dataset
