@@ -80,9 +80,9 @@ def post_train():
             mask = y == cat
             cat = cat.item()
 
-            batch_stats[cat]["pot_sum"] += potential[mask].sum().item()
-            batch_stats[cat]["dist_sum"] += dist_measure[mask, cat].sum().item()  # type: ignore
-            batch_stats[cat]["count"] += mask.sum().item()
+            batch_stats[cat]["pot_sum"] += potential[mask].detach().sum().item()
+            batch_stats[cat]["dist_sum"] += dist_measure[mask, cat].detach().sum().item()  # type: ignore
+            batch_stats[cat]["count"] += mask.detach().sum().item()
 
     # make post_train dict
     post_train_res = {

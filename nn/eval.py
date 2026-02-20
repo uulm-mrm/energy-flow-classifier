@@ -73,7 +73,7 @@ def evaluate():
 
         # compute potential
         t = torch.zeros((x.shape[0], 1), dtype=x.dtype, device=x.device)
-        potential = net.forward(x, t)
+        potential = net.forward(x, t).detach()
 
         # solve process to get distances from prototypes
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
@@ -82,7 +82,7 @@ def evaluate():
         _, x_traj = proc.sample(x, intervals, steps=cfg.ode_steps)
         sols = x_traj[-1]
         sols_flat = sols.view(sols.shape[0], -1)
-        dist_measure = torch.cdist(sols_flat, prototypes_flat)
+        dist_measure = torch.cdist(sols_flat, prototypes_flat).detach()
 
         # save state as pt
         state["meta"] = ["labels", "potential", "distance"]
