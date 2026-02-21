@@ -1,5 +1,5 @@
 import os
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 import json
 import logging
 
@@ -34,33 +34,13 @@ parser.add_argument(  # https://www.nuscenes.org/nuimages#data-annotation
 )
 
 
-def export(cfg: ExportConfig, args: Namespace):
-    # iou threshold
-    iou_thresh = 0.75
-
-    # make dir to save data
-    os.makedirs(cfg.output_dir, exist_ok=True)
-
-    # start up logger
-    logging.basicConfig(
-        filename=os.path.join(cfg.output_dir, "data_export.log"),
-        filemode="w",
-        format="%(asctime)s | %(levelname)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
-
-    nuim = NuImages(cfg.version, cfg.input_dir, verbose=True, lazy=True)
-    extractor = RoIAlignExtractor(device=torch.device("cuda"))
-
-    # make and save label mappings
-    nuim_tokens_to_category, category_to_name = category_mappings(nuim, args.labels)
-    cfg.set_labels(category_to_name)
-
-    # save config
-    with open(os.path.join(cfg.output_dir, "config.json"), "w+", encoding="utf-8") as f:
-        f.write(json.dumps(cfg.__dict__, indent=4))
-
+def export(
+    nuim: NuImages,
+    extractor: RoIAlignExtractor,
+    cfg: ExportConfig,
+    token_to_cat: dict[str, int],
+    iou_thresh: float = 0.75,
+):
     # lookup table for quicker indexing later on
     lut = {"fnames": [], "offsets": []}
     offset = 0
@@ -73,7 +53,7 @@ def export(cfg: ExportConfig, args: Namespace):
             continue
 
         # extract ground truth from image
-        gt = get_sample_data_gt(nuim, sample_data["token"], nuim_tokens_to_category)
+        gt = get_sample_data_gt(nuim, sample_data["token"], token_to_cat)
 
         if not gt:
             logging.info("No boxes in %s", sample_data["filename"])
@@ -127,7 +107,33 @@ def main():
     args = parser.parse_args()
     cfg = ExportConfig(dataset="nuimages-v1.0", version=args.version)
 
-    export(cfg, args)
+    # iou threshold
+    iou_thresh = 0.75
+
+    # make dir to save data
+    os.makedirs(cfg.output_dir, exist_ok=True)
+
+    # start up logger
+    logging.basicConfig(
+        filename=os.path.join(cfg.output_dir, "data_export.log"),
+        filemode="w",
+        format="%(asctime)s | %(levelname)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.INFO,
+    )
+
+    nuim = NuImages(cfg.version, cfg.input_dir, verbose=True, lazy=True)
+    extractor = RoIAlignExtractor(device=torch.device("cuda"))
+
+    # # make and save label mappings
+    tokens_to_category, category_to_name = category_mappings(nuim, args.labels)
+    cfg.set_labels(category_to_name)
+
+    # save config
+    with open(os.path.join(cfg.output_dir, "config.json"), "w+", encoding="utf-8") as f:
+        f.write(json.dumps(cfg.__dict__, indent=4))
+
+    export(nuim, extractor, cfg, tokens_to_category, iou_thresh=iou_thresh)
     compute_prototypes(cfg)
 
 

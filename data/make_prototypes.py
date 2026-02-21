@@ -14,7 +14,7 @@ def compute_prototypes(cfg: ExportConfig):
     }
 
     for fname in tqdm(os.listdir(cfg.output_dir)):
-        if not fname.endswith(".pt"):
+        if not fname.endswith(".pt") or "prototypes" in fname:
             continue
 
         frame = torch.load(os.path.join(cfg.output_dir, fname))
