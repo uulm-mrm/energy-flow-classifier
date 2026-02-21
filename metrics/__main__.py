@@ -13,9 +13,9 @@ parser.add_argument("--run", type=str, default="debug_run")
 parser.add_argument("--eval", type=str)
 parser.add_argument("--metrics", type=str, nargs="+", default=["accuracy"])
 
-METRICS: dict[str, Callable[[Run, str, torch.device | str], float]] = {
-    "accuracy": metrics.accuracy.metric
-}
+METRICS: dict[
+    str, Callable[[metrics.gamma.MultiGamma, Run, str, torch.device | str], float]
+] = {"accuracy": metrics.accuracy.metric}
 
 
 def main():
@@ -24,9 +24,10 @@ def main():
     torch.manual_seed(42)
     torch.set_printoptions(precision=4, sci_mode=False)
 
-    # load run config
+    # load run and gamma
     args = parser.parse_args()
     run = Run.init_from_name(args.run)
+    gamma = metrics.gamma.MultiGamma(run=args.run, device=device)
 
     # get eval dir
     eval_dir = os.path.join(run.eval_dir, args.eval)
@@ -35,7 +36,7 @@ def main():
     retvals = {}
     for metric in args.metrics:
         func = METRICS[metric]
-        retvals[metric] = func(run, eval_dir, device)
+        retvals[metric] = func(gamma, run, eval_dir, device)
 
     print(retvals)
 
