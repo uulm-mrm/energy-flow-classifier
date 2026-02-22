@@ -14,7 +14,8 @@ parser.add_argument("--eval", type=str)
 parser.add_argument("--metrics", type=str, nargs="+", default=["accuracy"])
 
 METRICS: dict[
-    str, Callable[[metrics.gamma.MultiGamma, Run, str, torch.device | str], float]
+    str,
+    Callable[[metrics.distros.DataDistributions, Run, str, torch.device | str], float],
 ] = {"accuracy": metrics.accuracy.metric}
 
 
@@ -27,7 +28,7 @@ def main():
     # load run and gamma
     args = parser.parse_args()
     run = Run.init_from_name(args.run)
-    gamma = metrics.gamma.MultiGamma(run=args.run, device=device)
+    gamma = metrics.distros.DataDistributions(run=args.run, device=device)
 
     # get eval dir
     eval_dir = os.path.join(run.eval_dir, args.eval)

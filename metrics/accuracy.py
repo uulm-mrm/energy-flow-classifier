@@ -8,11 +8,11 @@ import torch
 from torch import Tensor
 
 from nn.run import Run
-from metrics.gamma import MultiGamma
+from metrics.distros import DataDistributions
 
 
 def metric(
-    gamma: MultiGamma, run: Run, eval_dir: str, device: torch.device | str
+    dd: DataDistributions, run: Run, eval_dir: str, device: torch.device | str
 ) -> float:
     true_positives = 0
     count = 0
@@ -23,10 +23,10 @@ def metric(
 
         batch_data: dict[str, Tensor] = torch.load(os.path.join(eval_dir, pt))
         dist = batch_data["data"][:, 2:].to(device)
+        pot = batch_data["data"][:, 1].to(device).view(-1, 1)
         labels = batch_data["data"][:, 0].to(device).view(-1)
 
-        measure = gamma.get_likelihoods(dist)
-        preds = measure.argmax(dim=-1)
+        preds = dist.argmin(dim=-1)
 
         true_positives += (labels == preds).sum().item()
         count += labels.numel()
