@@ -66,7 +66,7 @@ def main():
         axes[i][1].set_title(f"Category {cat} - Potentials")
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig(os.path.join("visu", "plots", "stats.pdf"), format="pdf")
 
 
 if __name__ == "__main__":
