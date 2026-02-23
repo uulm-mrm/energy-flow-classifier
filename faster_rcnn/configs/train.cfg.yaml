@@ -1,0 +1,3 @@
+train_config:
+  learn_rate: !!float 1e-4
+  epochs: &e 1000
