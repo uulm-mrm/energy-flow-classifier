@@ -35,7 +35,7 @@ parser.add_argument(
     "--labels",
     type=__kvp,
     nargs="+",
-    default=[(1, "person"), (3, "car")],
+    default=[],
 )
 
 

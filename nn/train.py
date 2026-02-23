@@ -49,7 +49,7 @@ def train():
     run = Run(
         args.model_config, args.data_config, args.train_config, args.name, train=True
     )
-    save_every = run.train_cfg.epochs // 10
+    save_every = run.train_cfg.epochs // 20
 
     # dataset
     ds = RoIFeatureDataset(run.data_cfg.get_export_cfg())

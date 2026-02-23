@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 
 from tqdm import tqdm
 
+import numpy as np
+
 from scipy import stats
 
 import torch
@@ -87,11 +89,10 @@ def post_train():
             batch_stats[cat]["pot"].append(potential[mask].detach().cpu())
 
     # make post_train dict
-    post_train_res = {
+    post_train_res = {  # maybe add mode?
         cat: {
-            "dist_shape": torch.empty(size=(0,)),
-            "dist_loc": torch.empty(size=(0,)),
-            "dist_scale": torch.empty(size=(0,)),
+            "dist_kde": None,
+            "dist_quant": torch.empty(size=(0,)),
             "pot_loc": torch.empty(size=(0,)),
             "pot_sd": torch.empty(size=(0,)),
         }
@@ -103,11 +104,14 @@ def post_train():
         pot = torch.cat(data["pot"], dim=0)
 
         # get distance gamma estimation
-        shape, loc, scale = stats.gamma.fit(dist)
+        kde = stats.gaussian_kde(dist)
+        post_train_res[cat]["dist_kde"] = kde
 
-        post_train_res[cat]["dist_shape"] = torch.tensor(shape)
-        post_train_res[cat]["dist_loc"] = torch.tensor(loc)
-        post_train_res[cat]["dist_scale"] = torch.tensor(scale)
+        # compute nll and get the 95th quantile
+        likelihoods = kde.evaluate(dist)
+        nll = -np.log(likelihoods + 1e-8)
+        nll_thresh = np.quantile(nll, q=0.95)
+        post_train_res[cat]["dist_quant"] = nll_thresh
 
         # estimate mean and sd for potential
         loc, dev = torch.std_mean(pot)

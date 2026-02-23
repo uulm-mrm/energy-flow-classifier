@@ -1,5 +1,3 @@
-# pylint: disable=W0613
-
 import os
 
 from tqdm import tqdm
@@ -8,16 +6,13 @@ import torch
 from torch import Tensor
 
 from nn.run import Run
-from metrics.distros import DataDistributions
 
 
-def metric(
-    dd: DataDistributions,
-    run: Run,
-    eval_dir: str,
-    on_cats: Tensor,
-    device: torch.device | str,
-) -> float:
+def true_positive(preds: Tensor, labels: Tensor) -> float:
+    return (labels == preds).sum().item()
+
+
+def metric(run: Run, eval_dir: str, device: torch.device | str) -> float:
     true_positives = 0
     count = 0
 
@@ -26,17 +21,10 @@ def metric(
             continue
 
         batch_data: dict[str, Tensor] = torch.load(os.path.join(eval_dir, pt))
-        labels = batch_data["data"][:, 0].to(device).view(-1)
         dist = batch_data["data"][:, 2:].to(device)
-
-        # extract only labels that you're interested in
-        mask = torch.isin(labels, on_cats)
-        labels = labels[mask]
-        dist = dist[mask]
+        labels = batch_data["data"][:, 0].to(device).view(-1)
 
         preds = dist.argmin(dim=-1)
-        nlls = dd.get_dist_nll(dist, preds)
-        preds = dd.is_anomaly(preds, nlls)
 
         true_positives += (labels == preds).sum().item()
         count += labels.numel()

@@ -46,6 +46,7 @@ def main():
             # mask-out data
             p = potential[mask]
             d = dists[mask, label]
+            # d = dists[mask].min(dim=-1).values
 
             stats[label]["potentials"].append(p)
             stats[label]["distances"].append(d)
