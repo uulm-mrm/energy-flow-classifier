@@ -1,2 +1,2 @@
-from nn.configs.config import *
-from nn.configs.yaml_utils import *
+from faster_rcnn.configs.config import *
+from faster_rcnn.configs.yaml_utils import *
