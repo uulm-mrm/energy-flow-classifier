@@ -2,6 +2,6 @@ data_config:
   dataset: nuimages-v1.0
   version: v1.0-mini
 
-  batch_size: 2048
+  batch_size: 4096
   shuffle: true
   skip_last: true
