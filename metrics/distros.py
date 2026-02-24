@@ -77,19 +77,18 @@ class DataDistributions:
 
         Args:
             preds (Tensor): class predictions (B,)
-            nlls (Tensor): negative log likelihoods
+            nlls (Tensor): negative log likelihoods (B,)
 
         Returns:
             Tensor: OOD predictions masked out with -1's
         """
-        unique_cats = torch.unique(preds)
-        new_preds = torch.zeros_like(preds)
+        # get anomaly masks
+        thresholds = self.dist_quants[preds]
+        anomaly_mask = nlls > thresholds
 
-        for cat in unique_cats:
-            mask = preds == cat
-            new_preds[mask] = (
-                preds[mask] if nlls[cat] <= self.dist_quants[cat] else -1.0
-            )
+        # mask out anomalies
+        new_preds = preds.clone()
+        new_preds[anomaly_mask] = -1.0
 
         return new_preds
 
