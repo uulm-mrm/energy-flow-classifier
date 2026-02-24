@@ -44,7 +44,13 @@ def evaluate():
 
     # dataloader
     dl = RoIFeatureDataLoader(
-        ds, cfg.batch_size, shuffle=False, skip_last=False, device=device, train=False
+        ds,
+        cfg.batch_size,
+        shuffle=False,
+        skip_last=False,
+        device=device,
+        train=False,
+        box_head_features=True,
     )
 
     # model

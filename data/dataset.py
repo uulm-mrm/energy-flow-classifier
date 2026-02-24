@@ -62,6 +62,7 @@ class RoIFeatureDataLoader:
         skip_last: bool,
         device: torch.device | None = None,
         train: bool = True,
+        box_head_features: bool = False,  # use the 1024 features
     ) -> None:
 
         self.dataset = dataset
@@ -77,8 +78,13 @@ class RoIFeatureDataLoader:
 
         self.prototypes = torch.load(self.dataset.prototypes_pt) if train else None
 
+        self.box_head_features = box_head_features
+
     def get_from_file(self, fname: str, idxs: list[int]) -> tuple[Tensor, Tensor]:
         """Takes a list of indices in fname and returns features and labels associated to them"""
+
+        # whether to open the (B, 1024) or the (B, 256, 7, 7) frames
+        fname = "box_head_" + fname if self.box_head_features else fname
 
         frame: dict[str, Tensor] = torch.load(
             os.path.join(self.dataset.dataset_dir, fname)

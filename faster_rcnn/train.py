@@ -47,6 +47,7 @@ def train():
         run.data_cfg.shuffle,
         run.data_cfg.skip_last,
         device=device,
+        box_head_features=True,
     )
 
     # model

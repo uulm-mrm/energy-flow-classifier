@@ -80,14 +80,14 @@ def train():
     losses = {l: LOSS_DICT[l] for l in run.train_cfg.losses}
 
     # epoch loop
-    for e in (pbar := tqdm(range(run.train_cfg.epochs))):
+    for e in (pbar := tqdm(range(1, run.train_cfg.epochs + 1))):
         # compute annealed loss coefficients
         annealed_lambdas = list(
             map(
                 anneal_lambda,
                 run.train_cfg.lambdas,
                 run.train_cfg.warmups,
-                [e + 1] * len(run.train_cfg.lambdas),
+                [e] * len(run.train_cfg.lambdas),
             )
         )
 
