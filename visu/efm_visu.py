@@ -163,14 +163,30 @@ def main():
         f"{label_map[l.item()]}: {s.item():.3f}"  # type: ignore
         for l, s in zip(rois.labels, rois.scores)
     ]
+    colors = [
+        "red" if "Out-of-Distribution" not in label else "blue" for label in box_labels
+    ]
 
     img_with_boxes = draw_bounding_boxes(
-        img, rois.boxes, labels=box_labels, colors="red", width=3
+        img, rois.boxes, labels=box_labels, colors=colors, width=3  # type: ignore
     )
+    height, width = img_with_boxes.shape[1], img_with_boxes.shape[2]
+    dpi = 100
+    figsize = (width / dpi, height / dpi)
 
-    plt.imshow(img_with_boxes.permute(1, 2, 0))
-    plt.axis("off")
-    plt.savefig(os.path.join("visu", "plots", "nuimg_output.pdf"), format="pdf")
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+
+    ax = fig.add_axes([0, 0, 1, 1])  # type: ignore
+    ax.axis("off")
+
+    ax.imshow(img_with_boxes.permute(1, 2, 0))
+
+    plt.savefig(
+        os.path.join("visu", "plots", "nuimg_output.pdf"),
+        format="pdf",
+        bbox_inches="tight",  # Removes remaining tiny margins
+        pad_inches=0,  # Sets padding specifically to zero
+    )
     plt.show()
 
 
