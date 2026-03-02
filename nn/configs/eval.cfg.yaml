@@ -2,10 +2,10 @@ eval_config:
   run_name: !!str all_data_conv_1k
   checkpoint: 19  # number in front of the checkpoint
 
-  # dataset: nuimages-v1.0
-  # version: v1.0-val
-  dataset: COCO
-  version: val2017
+  dataset: nuimages-v1.0
+  version: v1.0-train
+  # dataset: COCO
+  # version: val2017
   batch_size: 1024
   
-  ode_steps: 10
+  ode_steps: 100

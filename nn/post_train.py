@@ -75,7 +75,7 @@ def post_train():
         intervals = torch.tensor([[0.0, 1.0]], dtype=x.dtype, device=x.device)
         intervals = intervals.expand(x.shape[0], 2)
 
-        _, x_traj = proc.sample(x, intervals, steps=10)
+        _, x_traj = proc.sample(x, intervals, steps=100)
         sols = x_traj[-1]
         sols_flat = sols.view(sols.shape[0], -1)
         dist_measure = torch.cdist(sols_flat, prototypes_flat)
