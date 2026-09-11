@@ -51,7 +51,7 @@ The `--version` argument is set to `val2017` by default, while the `--labels` ar
 #### 1. Configurations
 There are three main configurations that need to be defined before training.
 
-The first one is regarding the Time-Dependent CNN that will be used for training the velocity field neural network. It is defined in the `nn/models/configs/cnn.cfg.yaml/` file. Each layer has to be defined with (at least) the non-optional parameters from the layer class, so that the model can be properly initialized. The example configuration used in the paper is defined by default in the configuration file for the CNN.
+The first one is regarding the Time-Dependent CNN that will be used for training the velocity field neural network. It is defined in the `nn/models/configs/cnn.cfg.yaml` file. Each layer has to be defined with (at least) the non-optional parameters from the layer class, so that the model can be properly initialized. The example configuration used in the paper is defined by default in the configuration file for the CNN.
 
 The second config is regarding the data that will be used and all the hyperparameters regarding data. It is found inside `nn/configs/data.cfg.yaml`. The configuration used in the paper is present by default.
 
